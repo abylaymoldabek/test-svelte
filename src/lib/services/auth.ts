@@ -5,7 +5,7 @@ import type {
 	ResetPasswordRequest 
 } from '../types/auth.js';
 
-const API_BASE_URL = import.meta.env.DEV ? '' : 'https://mars.dev.okto.ru:2000';
+const API_BASE_URL = import.meta.env.PROD ? '' : 'https://mars.stage.okto.ru:2000';
 
 interface AuthTokenResponse {
 	auth_token: string;
@@ -18,7 +18,7 @@ interface AuthErrorResponse {
 class AuthService {
 	private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 		const url = `${API_BASE_URL}${endpoint}`;
-		
+		console.log('Request URL:', url);
 		const config: RequestInit = {
 			headers: {
 				'Content-Type': 'application/json',
@@ -44,8 +44,14 @@ class AuthService {
 	}
 
 	async login(credentials: LoginCredentials): Promise<AuthResponse> {
-		// Используем API /auth/api для получения токена
-		const tokenResponse = await this.request<AuthTokenResponse>('/api/auth/api', {
+		// Используем разные пути для dev и production
+		const endpoint = import.meta.env.PROD ? '/auth/api' : '/auth/api';
+		console.log('Environment:', import.meta.env.PROD ? 'PROD' : 'DEV');
+		console.log('API_BASE_URL:', API_BASE_URL);
+		console.log('Endpoint:', endpoint);
+		console.log('Full URL:', `${API_BASE_URL}${endpoint}`);
+		
+		const tokenResponse = await this.request<AuthTokenResponse>(endpoint, {
 			method: 'POST',
 			body: JSON.stringify({
 				email: credentials.email,
@@ -90,8 +96,9 @@ class AuthService {
 
 	async checkToken(token: string): Promise<boolean> {
 		try {
-			// Используем API /auth/check-jwt-token для проверки токена
-			await this.request('/api/auth/check-jwt-token', {
+			// Используем разные пути для dev и production
+			const endpoint = import.meta.env.DEV ? '/api/v1/auth/check-jwt-token' : '/v1/auth/check-jwt-token';
+			await this.request(endpoint, {
 				method: 'POST',
 				body: JSON.stringify({
 					jwt: token,
