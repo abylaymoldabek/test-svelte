@@ -5,7 +5,7 @@ import type {
 	ResetPasswordRequest 
 } from '../types/auth.js';
 
-const API_BASE_URL = import.meta.env.PROD ? '' : 'https://mars.stage.okto.ru:2000';
+const API_BASE_URL = import.meta.env.PROD ? 'https://mars.stage.okto.ru:2000' : 'https://mars.stage.okto.ru:2000';
 
 interface AuthTokenResponse {
 	auth_token: string;
