@@ -39,7 +39,7 @@ async function fetchProducts() {
       params.append('sort', sortOrder === 'А-Я' ? 'date_asc' : 'date_desc');
     }
 
-    const response = await fetch(`/api/api/v1/products`);
+    const response = await fetch(`/api/v1/products`);
     const allData = await response.json();
     
     if (Array.isArray(allData)) {

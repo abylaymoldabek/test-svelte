@@ -1,12 +1,12 @@
 // Сервис для работы с продуктами (получение списка, добавление)
 import type { Product, ProductCreateRequest } from '../types/product';
 
-const API_BASE_URL = '';
+const API_BASE_URL = '/api/v1';
 
 class ProductService {
   // Получить список продуктов
   async getProducts(): Promise<Product[]> {
-    const response = await fetch(`${API_BASE_URL}/api/products`);
+    const response = await fetch(`${API_BASE_URL}/products`);
     if (!response.ok) throw new Error('Ошибка получения списка продуктов');
     return response.json();
   }
