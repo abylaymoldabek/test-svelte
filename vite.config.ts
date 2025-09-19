@@ -6,7 +6,7 @@ export default defineConfig({
 	server: {
 		proxy: {
 			'/api': {
-				target: 'https://mars.dev.okto.ru:2000',
+				target: 'http://158.160.90.93:8082',
 				changeOrigin: true,
 				rewrite: (path) => path.replace(/^\/api/, '')
 			}

@@ -44,7 +44,6 @@ class AuthService {
 	}
 
 	async login(credentials: LoginCredentials): Promise<AuthResponse> {
-		// Используем разные пути для dev и production
 		const endpoint = import.meta.env.PROD ? '/auth/api' : '/auth/api';
 		console.log('Environment:', import.meta.env.PROD ? 'PROD' : 'DEV');
 		console.log('API_BASE_URL:', API_BASE_URL);
@@ -59,12 +58,11 @@ class AuthService {
 			}),
 		});
 
-		// Создаем mock user object, так как API не возвращает user данные
 		const user = {
-			id: '1', // temp id
+			id: '1',
 			email: credentials.email,
-			firstName: 'User', // temp name
-			lastName: 'Admin', // temp lastname
+			firstName: 'User',
+			lastName: 'Admin',
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};

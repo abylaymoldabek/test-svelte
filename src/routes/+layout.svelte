@@ -2,8 +2,17 @@
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth.js';
 	import favicon from '$lib/assets/favicon.svg';
+	import Sidebar from '$lib/Sidebar.svelte';
+	import { get } from 'svelte/store';
 
 	let { children } = $props();
+	let isAuthenticated = false;
+	let isInitialized = false;
+
+	const unsubscribe = authStore.subscribe(state => {
+		isAuthenticated = state.isAuthenticated;
+		isInitialized = state.isInitialized;
+	});
 
 	onMount(() => {
 		authStore.init();
@@ -14,9 +23,18 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-{@render children?.()}
-
-<style>
+{#if $authStore.isInitialized}
+  {#if $authStore.isAuthenticated}
+    <div style="display: flex; min-height: 100vh;">
+      <Sidebar />
+      <main style="flex:1; margin-left:220px; padding:2rem 2rem 2rem 0;">
+        {@render children?.()}
+      </main>
+    </div>
+  {:else}
+    {@render children?.()}
+  {/if}
+{/if}<style>
 	:global(body) {
 		margin: 0;
 		padding: 0;
