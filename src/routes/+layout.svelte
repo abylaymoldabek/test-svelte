@@ -73,18 +73,15 @@
 	<link rel="icon" href={favicon} />
 </svelte:head>
 
-{#if $authStore.isInitialized}
-  {#if $authStore.isAuthenticated}
-    <div class="app-container">
-      <Navbar />
-      <div class="content-container">
-        <Sidebar />
-        <main class="main-content">
-          <slot />
-        </main>
-      </div>
+{#if isAuthenticated}
+  <div class="app-container">
+    <div class="content-container">
+      <Sidebar />
+      <main class="main-content">
+        <slot />
+      </main>
     </div>
-  {:else}
-    <slot />
-  {/if}
+  </div>
+{:else if isInitialized}
+  <slot />
 {/if}

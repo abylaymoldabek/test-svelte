@@ -11,6 +11,13 @@ class ProductService {
     return response.json();
   }
 
+  // Получить один продукт по ID
+  async getProduct(id: string): Promise<Product> {
+    const response = await fetch(`${API_BASE_URL}/products/${id}`);
+    if (!response.ok) throw new Error('Ошибка получения продукта');
+    return response.json();
+  }
+
   // Добавить продукт
   async addProduct(data: ProductCreateRequest): Promise<Product> {
     const response = await fetch(`${API_BASE_URL}/api/products`, {

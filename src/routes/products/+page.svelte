@@ -133,6 +133,10 @@ function selectProduct(product: Product) {
   window.location.href = `/products/${product.id}`;
 }
 
+function editProduct(product: Product) {
+  window.location.href = `/products/${product.id}/edit`;
+}
+
 function setSortField(field: string) {
   if (sortField === field) {
     sortOrder = sortOrder === 'А-Я' ? 'Я-А' : 'А-Я';
@@ -540,6 +544,38 @@ th .sort-button.active {
   background: #e0e7ff;
   font-weight: 600;
 }
+
+.button-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.action-button {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  color: white;
+  text-decoration: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.view-button {
+  background: #4f46e5;
+}
+
+.view-button:hover {
+  background: #4338ca;
+}
+
+.edit-button {
+  background: #059669;
+}
+
+.edit-button:hover {
+  background: #047857;
+}
 </style>
 
 <div class="products-page">
@@ -564,7 +600,13 @@ th .sort-button.active {
               <div class="th-content">
                 <div 
                   class="th-title" 
-                  on:click={() => activeSearch = activeSearch === 'name' ? '' : 'name'}
+                  on:click={() => {
+                    activeSearch = activeSearch === 'name' ? '' : 'name';
+                    if (activeSearch !== 'name') {
+                      search = '';
+                      debouncedFetch();
+                    }
+                  }}
                 >
                   <span>Name</span>
                   <button 
@@ -581,8 +623,12 @@ th .sort-button.active {
                       type="text"
                       placeholder="Поиск по имени..."
                       bind:value={search}
-                      on:input={debouncedFetch}
+                      on:input={() => {
+                        currentPage = 1;
+                        debouncedFetch();
+                      }}
                       class="th-search-input"
+                      autofocus
                     />
                   </div>
                 {/if}
@@ -624,21 +670,33 @@ th .sort-button.active {
               </div>
             </th>
             <th>Company ID</th>
+            <th>Действия</th>
           </tr>
         </thead>
         <tbody>
             {#each products as product (product.id)}
-              <tr
-                on:click={() => selectProduct(product)}
-                on:keydown={(e) => e.key === 'Enter' && selectProduct(product)}
-                role="button"
-                tabindex="0"
-              >
+              <tr>
                 <td>{product.id}</td>
                 <td>{product.name}</td>
                 <td>{new Date(product.created_at).toLocaleString()}</td>
                 <td>{product.gtin_number}</td>
                 <td>{product.company_id}</td>
+                <td>
+                  <div class="button-group">
+                    <a 
+                      href={`/products/${product.id}`}
+                      class="action-button view-button"
+                    >
+                      Просмотр
+                    </a>
+                    <a 
+                      href={`/products/${product.id}/edit`}
+                      class="action-button edit-button"
+                    >
+                      Редактировать
+                    </a>
+                  </div>
+                </td>
               </tr>
             {/each}
           </tbody>

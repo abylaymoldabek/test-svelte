@@ -51,7 +51,23 @@ onMount(async () => {
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+}
+
+.edit-button {
+  padding: 0.5rem 1rem;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.edit-button:hover {
+  background: #4338ca;
 }
 
 .back-button {
@@ -130,10 +146,15 @@ h1 {
 
 <div class="product-page">
   <div class="header">
-    <a href="/products" class="back-button">
-      ← Назад к списку
-    </a>
-    <h1>{product?.name || 'Загрузка...'}</h1>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="/products" class="back-button">
+        ← Назад к списку
+      </a>
+      <h1>{product?.name || 'Загрузка...'}</h1>
+    </div>
+    <button class="edit-button" on:click={() => window.location.href = `/products/${product?.id}/edit`}>
+      Редактировать
+    </button>
   </div>
 
   {#if isLoading}
