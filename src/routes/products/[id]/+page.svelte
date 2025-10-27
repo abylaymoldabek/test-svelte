@@ -9,7 +9,6 @@ interface Product {
   company_id: string;
 }
 
-export let data;
 
 let product: Product | null = null;
 let isLoading = true;
@@ -182,7 +181,6 @@ h1 {
           <span class="label">Создан</span>
           <span class="value">
             {new Date(product.created_at).toLocaleDateString()} 
-            {new Date(product.created_at).toLocaleTimeString()}
           </span>
         </div>
       </div>

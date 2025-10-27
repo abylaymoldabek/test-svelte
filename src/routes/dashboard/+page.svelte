@@ -1,19 +1,30 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { authStore } from '$lib/stores/auth.js';
+	import { tokenPayload } from '$lib/stores/token.js';
+	import { useAuthGuard } from '$lib/utils/auth-guard.js';
+	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let user: any = null;
+	let authGuard: { isAuthorized: boolean; cleanup: () => void; checkAuth: () => Promise<boolean>; } | null = null;
 
 	onMount(() => {
+		// Initialize auth guard
+		authGuard = useAuthGuard('/dashboard');
+
+		// Subscribe to auth store for user info
 		const unsubscribe = authStore.subscribe(state => {
 			user = state.user;
-			if (!state.isAuthenticated && state.isInitialized && !state.isLoading) {
-				goto('/login');
-			}
 		});
 
 		return unsubscribe;
+	});
+
+	onDestroy(() => {
+		if (authGuard) {
+			authGuard.cleanup();
+		}
 	});
 
 	async function handleLogout() {
@@ -26,7 +37,7 @@
 	<title>Dashboard - Okto</title>
 </svelte:head>
 
-{#if user}
+{#if $tokenPayload && user}
 	<div class="dashboard">
 		<header class="dashboard-header">
 			<div class="header-content">
@@ -47,8 +58,8 @@
 		</header>
 		
 		<main class="dashboard-main">
+			<PageHeader title="Dashboard" />
 			<div class="container">
-				<h1>Dashboard</h1>
 				<p>Здесь будет текст</p>
 				
 				<div class="cards-grid">
@@ -79,14 +90,9 @@
 		</main>
 	</div>
 {:else}
-	<div class="loading">
-		<div class="spinner">
-			<svg width="40" height="40" viewBox="0 0 24 24">
-				<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"/>
-				<path fill="currentColor" opacity="0.75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-			</svg>
-		</div>
-		<p>Loading...</p>
+	<div class="loading-container">
+		<div class="loading-spinner"></div>
+		<p>Проверка авторизации...</p>
 	</div>
 {/if}
 
@@ -94,6 +100,36 @@
 	.dashboard {
 		min-height: 100vh;
 		background: #f8fafc;
+	}
+
+	.loading-container {
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+		align-items: center;
+		min-height: 100vh;
+		background: #f8fafc;
+		gap: 1rem;
+	}
+
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #e5e7eb;
+		border-top: 4px solid #3b82f6;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+	}
+
+	.loading-container p {
+		color: #6b7280;
+		font-size: 1rem;
+		margin: 0;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
 	}
 	
 	.dashboard-header {
@@ -163,12 +199,6 @@
 		padding: 0 20px;
 	}
 	
-	h1 {
-		font-size: 2.5rem;
-		color: #1a202c;
-		margin-bottom: 0.5rem;
-	}
-	
 	.dashboard-main p {
 		color: #6b7280;
 		margin-bottom: 2rem;
@@ -228,23 +258,6 @@
 		transition: width 0.3s ease;
 	}
 	
-	.loading {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		min-height: 100vh;
-		gap: 16px;
-	}
-	
-	.spinner {
-		color: #667eea;
-	}
-	
-	.spinner svg {
-		animation: spin 1s linear infinite;
-	}
-	
 	@keyframes spin {
 		from { transform: rotate(0deg); }
 		to { transform: rotate(360deg); }
@@ -263,10 +276,6 @@
 		
 		.user-info {
 			align-items: center;
-		}
-		
-		h1 {
-			font-size: 2rem;
 		}
 		
 		.cards-grid {

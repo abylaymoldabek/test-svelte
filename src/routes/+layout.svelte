@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { authStore } from '$lib/stores/auth.js';
+	import { initializeTokenPayload } from '$lib/stores/token.js';
 	import favicon from '$lib/assets/favicon.svg';
-	import Navbar from '$lib/components/Navbar.svelte';
 	import Sidebar from '$lib/Sidebar.svelte';
-	import { get } from 'svelte/store';
+	import GlobalHeader from '$lib/components/GlobalHeader.svelte';
 
 	let isAuthenticated = false;
 	let isInitialized = false;
@@ -16,6 +16,16 @@
 
 	onMount(() => {
 		authStore.init();
+		
+		// Инициализируем токен payload при загрузке приложения
+		const cleanupTokenListener = initializeTokenPayload();
+		
+		// Очищаем слушателя при размонтировании
+		return () => {
+			if (cleanupTokenListener) {
+				cleanupTokenListener();
+			}
+		};
 	});
 </script>
 
@@ -33,9 +43,11 @@
 
   .main-content {
     flex: 1;
-    margin-left: 220px;
-    padding: 2rem 2rem 2rem 0;
+    margin-left: 180px;
+    margin-top: 60px; /* Отступ для глобального заголовка */
+    padding: 1.5rem;
     background: #f8fafc;
+    min-height: calc(100vh - 60px);
   }
 
   :global(body) {
@@ -67,6 +79,14 @@
   :global(button) {
     font-family: inherit;
   }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .main-content {
+      margin-left: 0;
+      padding: 1rem;
+    }
+  }
 </style>
 
 <svelte:head>
@@ -75,6 +95,7 @@
 
 {#if isAuthenticated}
   <div class="app-container">
+    <GlobalHeader />
     <div class="content-container">
       <Sidebar />
       <main class="main-content">
@@ -83,5 +104,7 @@
     </div>
   </div>
 {:else if isInitialized}
-  <slot />
+	<div class="app-container">
+    	<slot />
+  </div>
 {/if}

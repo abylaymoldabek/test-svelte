@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { authStore } from '$lib/stores/auth.js';
 	import { authService } from '$lib/services/auth.js';
+	import { updateTokenPayload } from '$lib/stores/token.js';
 	import type { LoginCredentials } from '$lib/types/auth.js';
 
 	let email = '';
@@ -23,9 +25,17 @@
 			
 			authService.storeTokens(response.token, response.refreshToken);
 			
+			// Обновляем токен в store немедленно
+			updateTokenPayload(response.token);
+			
 			authStore.setUser(response.user);
 			
-			await goto('/dashboard');
+			// Get redirect URL from query params, default to dashboard
+			const redirectTo = $page.url.searchParams.get('redirect') || '/dashboard';
+			console.log('Login successful, redirecting to:', redirectTo);
+			console.log('Current URL search params:', $page.url.searchParams.toString());
+			
+			await goto(redirectTo);
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Login failed';
 		} finally {

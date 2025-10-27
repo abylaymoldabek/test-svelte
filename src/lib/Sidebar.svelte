@@ -4,11 +4,11 @@
 
 <nav class="sidebar">
   <ul>
-    <li>
+    <!-- <li>
       <a 
-        href="/dashboard" 
+        href="/onboarding" 
         class="nav-link"
-        class:active={$page.url.pathname === '/dashboard'}
+        class:active={$page.url.pathname === '/onboarding'}
       >
         <span class="icon">📊</span>
         Первые шаги
@@ -53,8 +53,18 @@
         <span class="icon">📊</span>
         Отчёты
       </a>
-    </li>
+    </li> -->
     <li>
+      <a 
+        href="/reposts_vetis" 
+        class="nav-link"
+        class:active={$page.url.pathname === '/reposts_vetis'}
+      >
+        <span class="icon">📊</span>
+        Отчеты ветис
+      </a>
+    </li>
+    <!-- <li>
       <a 
         href="/integrations" 
         class="nav-link"
@@ -103,21 +113,22 @@
         <span class="icon">⚙️</span>
         Настройки компании
       </a>
-    </li>
+    </li> -->
   </ul>
 </nav>
 
 <style>
   .sidebar {
-    width: 220px;
-    background: #4f46e5;
-    color: #fff;
-    min-height: 100vh;
-    padding: 2rem 0 2rem 0;
+    width: 180px;
+    background: white;
+    min-height: calc(100vh - 60px); /* Учитываем глобальный заголовок */
+    padding: 1rem 0;
     position: fixed;
     left: 0;
-    top: 0;
-    z-index: 10;
+    top: 60px; /* Начинаем под глобальным заголовком */
+    z-index: 50;
+    border-right: 1px solid #e5e7eb;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
   }
 
   .sidebar ul {
@@ -126,35 +137,57 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.125rem;
   }
 
   .sidebar li {
-    margin-bottom: 1.2rem;
-    padding: 0 1rem;
+    margin-bottom: 0.125rem;
+    padding: 0 0.5rem;
   }
 
   .nav-link {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    color: #fff;
+    gap: 0.5rem;
+    color: #4b5563;
     text-decoration: none;
-    font-size: 1.1rem;
-    padding: 0.7rem 2rem;
+    font-size: 0.75rem;
+    padding: 0.5rem 0.75rem;
     border-radius: 6px;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
     font-weight: 500;
+    line-height: 1.2;
   }
 
-  .nav-link:hover, .nav-link.active {
-    background: #6366f1;
+  .nav-link:hover {
+    background: #f3f4f6;
+    color: #4b4bc7;
+    transform: translateX(1px);
+  }
+
+  .nav-link.active {
+    background: #4b4bc7;
+    color: white;
+    transform: translateX(1px);
+  }
+
+  .nav-link.active:hover {
+    background: #4040b2;
   }
 
   .icon {
-    font-size: 1.25rem;
+    font-size: 1rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 0.9;
+    flex-shrink: 0;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .sidebar {
+      display: none; /* Скрываем на мобильных устройствах */
+    }
   }
 </style>

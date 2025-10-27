@@ -1,7 +1,9 @@
 <script lang="ts">
-import { onMount } from 'svelte';
-import { productService } from '$lib/services/product';
+import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
+import { tokenPayload } from '$lib/stores/token.js';
+import { useAuthGuard } from '$lib/utils/auth-guard.js';
+import PageHeader from '$lib/components/PageHeader.svelte';
 
 interface Product {
   id: string;
@@ -25,7 +27,7 @@ interface ProductResponse {
 
 let products: Product[] = [];
 let currentPage = 1;
-let itemsPerPage = 10;
+let itemsPerPage = 100;
 let totalItems = 0;
 let isLoading = false;
 let hasMore = false;
@@ -40,8 +42,7 @@ async function fetchProducts() {
     
     // Add search filters
     if (search) {
-      params.append('search_by', 'name');
-      params.append('search_value', search);
+      params.append('name', search);
     }
 
     if (gtinSearch) {
@@ -83,8 +84,19 @@ function debouncedFetch() {
   }, 300);
 }
 
+let authGuard: { isAuthorized: boolean; cleanup: () => void; checkAuth: () => Promise<boolean>; } | null = null;
+
 onMount(() => {
+  // Initialize auth guard
+  authGuard = useAuthGuard('/products');
+  
   fetchProducts();
+});
+
+onDestroy(() => {
+  if (authGuard) {
+    authGuard.cleanup();
+  }
 });
 
 let search = '';
@@ -137,6 +149,34 @@ function editProduct(product: Product) {
   window.location.href = `/products/${product.id}/edit`;
 }
 
+async function deleteProduct(product: Product) {
+  if (!confirm(`Вы уверены, что хотите удалить продукт "${product.name}"?`)) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/v1/products/${product.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      // Удаляем продукт из локального массива
+      products = products.filter(p => p.id !== product.id);
+      // Обновляем общее количество
+      totalItems--;
+    } else {
+      const errorData = await response.text();
+      alert(`Ошибка при удалении продукта: ${errorData}`);
+    }
+  } catch (error) {
+    console.error('Ошибка при удалении продукта:', error);
+    alert('Произошла ошибка при удалении продукта');
+  }
+}
+
 function setSortField(field: string) {
   if (sortField === field) {
     sortOrder = sortOrder === 'А-Я' ? 'Я-А' : 'А-Я';
@@ -154,33 +194,67 @@ function setSortField(field: string) {
   padding: 2rem;
   background: #f8fafc;
   min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
-.header {
-  margin-bottom: 2rem;
-  background: white;
-  padding: 1.5rem;
-  border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-}
-
-h1 {
-  font-size: 1.25rem;
-  font-weight: 500;
-  color: #111827;
-  margin-bottom: 1rem;
-}
-
-.filters {
+.loading-container {
   display: flex;
-  gap: 1rem;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
+  min-height: 100vh;
+  background: #f8fafc;
+  gap: 1rem;
 }
 
-.sort-buttons {
-  display: flex;
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-container p {
+  color: #6b7280;
+  font-size: 1rem;
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.btn-add {
+  display: inline-flex;
+  align-items: center;
   gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #4b4bc7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+}
+
+.btn-add:hover {
+  background: #4040b2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(75, 75, 199, 0.2);
+}
+
+.btn-add svg {
+  transition: transform 0.2s ease;
+}
+
+.btn-add:hover svg {
+  transform: scale(1.1);
 }
 
 .sort-button {
@@ -203,114 +277,6 @@ h1 {
   border-color: #6366f1;
 }
 
-.products-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-}
-
-.products-list {
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 1rem;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-
-.product-item {
-  padding: 1rem;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-}
-
-.product-item:hover {
-  background: #f8fafc;
-}
-
-.product-item.selected {
-  background: #f0f7ff;
-}
-
-.product-item-content {
-  display: flex;
-  gap: 1rem;
-}
-
-
-
-.product-info {
-  flex: 1;
-}
-
-.product-name {
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  word-break: break-word;
-}
-
-.product-details {
-  font-size: 0.875rem;
-  color: #666;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.product-details-card {
-  background: white;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 2rem;
-  height: fit-content;
-  position: sticky;
-  top: 2rem;
-  margin-top: 2rem;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
-}
-
-.product-details-card h2 {
-  color: #111827;
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.details-grid {
-  display: grid;
-  gap: 1.25rem;
-}
-
-.detail-row {
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 1rem;
-  align-items: center;
-  padding: 0.5rem;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-}
-
-.detail-row:hover {
-  background-color: #f8fafc;
-}
-
-.label {
-  color: #666;
-  font-weight: 500;
-}
-
-.empty-details {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #666;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 2rem;
-}
-
 .pagination {
   display: flex;
   align-items: center;
@@ -325,65 +291,52 @@ h1 {
 }
 
 .pagination-button {
-  padding: 0.5rem 1rem;
-  border: 1px solid #e2e8f0;
+  padding: 0.625rem 1.25rem;
+  border: 2px solid #e2e8f0;
   background: white;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.5rem;
+  min-width: 2.75rem;
   font-weight: 500;
   color: #4b5563;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .pagination-button:hover:not(:disabled) {
-  border-color: #4f46e5;
-  color: #4f46e5;
-  background: #eff6ff;
+  border-color: #4b4bc7;
+  color: #4b4bc7;
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(75, 75, 199, 0.1);
 }
 
 .pagination-button:disabled {
   background: #f1f5f9;
   cursor: not-allowed;
   color: #94a3b8;
+  border-color: #e2e8f0;
 }
 
 .pagination-button.active {
-  background: #4f46e5;
+  background: #4b4bc7;
   color: white;
-  border-color: #4f46e5;
+  border-color: #4b4bc7;
+  box-shadow: 0 2px 4px rgba(75, 75, 199, 0.2);
 }
 
 .pagination-button.active:hover {
-  background: #4338ca;
+  background: #4040b2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(75, 75, 199, 0.2);
 }
 
 .pagination-info {
   color: #64748b;
   font-size: 0.875rem;
   padding: 0.5rem;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.status-badge.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.status-badge.blocked {
-  background: #fee2e2;
-  color: #991b1b;
 }
 
 .loading, .empty-list {
@@ -394,46 +347,101 @@ h1 {
   color: #666;
 }
 
+.empty-search {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  background: white;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.empty-search-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-search-content .search-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  display: inline-block;
+  opacity: 0.5;
+}
+
+.empty-search-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 0.5rem;
+}
+
+.empty-search-content p {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
 .products-table {
   background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+.products-table:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 10px 15px rgba(0, 0, 0, 0.1);
 }
 
 table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
 }
 
 th {
   background: #f8fafc;
-  padding: 1.25rem 1rem;
+  padding: 1.5rem 1.25rem;
   font-weight: 600;
-  color: #374151;
+  color: #1f2937;
   border-bottom: 2px solid #e5e7eb;
   text-align: left;
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+th:hover {
+  background: #f1f5f9;
 }
 
 td {
-  padding: 1.25rem 1rem;
+  padding: 1.25rem;
   border-bottom: 1px solid #e5e7eb;
   color: #4b5563;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 tbody tr {
-  transition: all 0.2s;
+  transition: all 0.2s ease;
   cursor: pointer;
 }
 
 tbody tr:hover {
   background: #f8fafc;
+  transform: translateY(-1px);
 }
 
 tbody tr:hover td {
   color: #1e293b;
+  border-bottom-color: #d1d5db;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 
@@ -496,26 +504,37 @@ tbody tr:hover td {
 }
 
 .th-search-input {
-  padding: 0.625rem 1rem;
+  padding: 0.875rem 1rem 0.875rem 2.75rem;
   border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 0.875rem;
   width: 100%;
   outline: none;
-  background: #f8fafc;
-  transition: all 0.2s;
+  background: #f8fafc url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e") no-repeat left 0.75rem center;
+  background-size: 1.25rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.th-search-input:hover {
+  border-color: #3b82f6;
+  background-color: white;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
 }
 
 .th-search-input:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-  background: white;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  transform: translateY(-1px);
 }
 
 .th-search-input::placeholder {
   color: #94a3b8;
   font-weight: 400;
+  font-style: italic;
 }
 
 th .sort-button {
@@ -552,53 +571,84 @@ th .sort-button.active {
 
 .action-button {
   display: inline-block;
-  padding: 0.5rem 1rem;
+  padding: 0.625rem 1.25rem;
   color: white;
   text-decoration: none;
-  border-radius: 0.375rem;
+  border-radius: 8px;
   font-size: 0.875rem;
-  transition: background-color 0.2s;
+  font-weight: 500;
+  transition: all 0.2s ease;
   white-space: nowrap;
-}
-
-.view-button {
-  background: #4f46e5;
-}
-
-.view-button:hover {
-  background: #4338ca;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .edit-button {
-  background: #059669;
+  background: #4b4bc7;
 }
 
 .edit-button:hover {
-  background: #047857;
+  background: #4040b2;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(75, 75, 199, 0.2);
+}
+
+.delete-button {
+  background: #dc2626;
+  border: none;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
 }
 </style>
 
+{#if $tokenPayload}
 <div class="products-page">
-  <div class="header">
-    <h1>Продукты</h1>
-  </div>
+  <PageHeader title="Продукты">
+    <button class="btn-add" on:click={() => window.location.href = '/products/new'}>
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+      Добавить продукт
+    </button>
+  </PageHeader>
 
   {#if isLoading}
     <div class="loading">Загрузка...</div>
   {:else if !products || products.length === 0}
     <div class="empty-list">
-      Нет продуктов
-      <pre>Debug: isLoading={isLoading}, products={JSON.stringify(products)}</pre>
+      <div class="empty-list-content">
+        <span class="list-icon">📦</span>
+        <h3>Список продуктов пуст</h3>
+        <p>На данный момент нет добавленных продуктов</p>
+      </div>
     </div>
   {:else}
-        <div class="products-table">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>
-              <div class="th-content">
-                <div 
+        {#if products.length === 0 && (search || gtinSearch)}
+      <div class="empty-search">
+        <div class="empty-search-content">
+          <span class="search-icon">🔍</span>
+          <h3>Ничего не найдено</h3>
+          {#if search}
+            <p>По запросу "{search}" ничего не найдено</p>
+          {:else if gtinSearch}
+            <p>По GTIN "{gtinSearch}" ничего не найдено</p>
+          {/if}
+        </div>
+      </div>
+    {:else}
+      <div class="products-table">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>
+                <div class="th-content">
+                  <div 
                   class="th-title" 
                   on:click={() => {
                     activeSearch = activeSearch === 'name' ? '' : 'name';
@@ -628,7 +678,6 @@ th .sort-button.active {
                         debouncedFetch();
                       }}
                       class="th-search-input"
-                      autofocus
                     />
                   </div>
                 {/if}
@@ -669,32 +718,30 @@ th .sort-button.active {
                 {/if}
               </div>
             </th>
-            <th>Company ID</th>
             <th>Действия</th>
           </tr>
         </thead>
         <tbody>
-            {#each products as product (product.id)}
+            {#each products as product (`${product.id}-${product.company_id}`)}
               <tr>
                 <td>{product.id}</td>
                 <td>{product.name}</td>
                 <td>{new Date(product.created_at).toLocaleString()}</td>
                 <td>{product.gtin_number}</td>
-                <td>{product.company_id}</td>
                 <td>
                   <div class="button-group">
                     <a 
-                      href={`/products/${product.id}`}
-                      class="action-button view-button"
-                    >
-                      Просмотр
-                    </a>
-                    <a 
-                      href={`/products/${product.id}/edit`}
+                      href={`/products/${product.id}/edit?company_id=${product.company_id}`}
                       class="action-button edit-button"
                     >
                       Редактировать
                     </a>
+                    <button 
+                      class="action-button delete-button"
+                      on:click={() => deleteProduct(product)}
+                    >
+                      Удалить
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -702,7 +749,8 @@ th .sort-button.active {
           </tbody>
         </table>
   
-        <div class="pagination">
+        {#if products.length > 0}
+          <div class="pagination">
           <button
             class="pagination-button"
             disabled={currentPage === 1}
@@ -745,6 +793,14 @@ th .sort-button.active {
             →
           </button>
         </div>
-    </div>
+        {/if}
+      </div>
+    {/if}
   {/if}
 </div>
+{:else}
+<div class="loading-container">
+  <div class="loading-spinner"></div>
+  <p>Проверка авторизации...</p>
+</div>
+{/if}

@@ -48,30 +48,21 @@ function createAuthStore() {
 			update(state => ({ ...state, isLoading: true }));
 			
 			const token = authService.getStoredToken();
-			if (token) {
+			const user = authService.getStoredPayload();
+			if (token && user) {
 				try {
-					const isValid = await authService.checkToken(token);
+					const isValid = await authService.checkToken(token, user.company_id || '');
 					if (isValid) {
-						// Создаем временного пользователя на основе токена
-						// В реальном приложении нужно получать данные пользователя с сервера
-						const user: User = {
-							id: '1',
-							email: 'user@example.com',
-							firstName: 'User',
-							lastName: 'Admin',
-							createdAt: new Date().toISOString(),
-							updatedAt: new Date().toISOString()
-						};
-						
+						// Токен действителен, получаем данные пользователя
 						update(state => ({
 							...state,
-							user,
+							company_id: user?.company_id || null,
+							email: user?.email || null,
 							isAuthenticated: true,
 							isLoading: false,
 							isInitialized: true
 						}));
 					} else {
-						// Токен недействителен, очищаем
 						await authService.logout();
 						update(state => ({
 							...state,
