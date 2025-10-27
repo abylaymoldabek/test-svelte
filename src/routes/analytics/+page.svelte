@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { tokenPayload } from '$lib/stores/token.js';
   import { useAuthGuard } from '$lib/utils/auth-guard.js';
-  import PageHeader from '$lib/components/PageHeader.svelte';
 
   let authGuard: { isAuthorized: boolean; cleanup: () => void; checkAuth: () => Promise<boolean>; } | null = null;
 
@@ -20,7 +19,6 @@
 
 {#if $tokenPayload}
 <div class="analytics-page">
-  <PageHeader title="Аналитика производства" />
   <div class="content">
     <p>Здесь будет содержимое страницы аналитики</p>
   </div>

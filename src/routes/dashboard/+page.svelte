@@ -4,7 +4,6 @@
 	import { authStore } from '$lib/stores/auth.js';
 	import { tokenPayload } from '$lib/stores/token.js';
 	import { useAuthGuard } from '$lib/utils/auth-guard.js';
-	import PageHeader from '$lib/components/PageHeader.svelte';
 
 	let user: any = null;
 	let authGuard: { isAuthorized: boolean; cleanup: () => void; checkAuth: () => Promise<boolean>; } | null = null;
@@ -58,7 +57,6 @@
 		</header>
 		
 		<main class="dashboard-main">
-			<PageHeader title="Dashboard" />
 			<div class="container">
 				<p>Здесь будет текст</p>
 				

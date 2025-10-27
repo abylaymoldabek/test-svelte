@@ -3,7 +3,6 @@ import { onMount, onDestroy } from 'svelte';
 import { slide } from 'svelte/transition';
 import { tokenPayload } from '$lib/stores/token.js';
 import { useAuthGuard } from '$lib/utils/auth-guard.js';
-import PageHeader from '$lib/components/PageHeader.svelte';
 
 interface Product {
   id: string;
@@ -607,7 +606,6 @@ th .sort-button.active {
 
 {#if $tokenPayload}
 <div class="products-page">
-  <PageHeader title="Продукты">
     <button class="btn-add" on:click={() => window.location.href = '/products/new'}>
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -615,7 +613,6 @@ th .sort-button.active {
       </svg>
       Добавить продукт
     </button>
-  </PageHeader>
 
   {#if isLoading}
     <div class="loading">Загрузка...</div>

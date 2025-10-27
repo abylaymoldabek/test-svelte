@@ -2,7 +2,6 @@
   import { onMount, onDestroy } from 'svelte';
   import { tokenPayload } from '$lib/stores/token.js';
   import { useAuthGuard } from '$lib/utils/auth-guard.js';
-  import PageHeader from '$lib/components/PageHeader.svelte';
 
   let authGuard: { isAuthorized: boolean; cleanup: () => void; checkAuth: () => Promise<boolean>; } | null = null;
   let companyName = 'OKTO';
@@ -44,13 +43,11 @@
 
 {#if $tokenPayload}
 <div class="settings-page">
-  <PageHeader title="Настройки компании">
     <div class="expiration-info">
       <span class="expiration-label">Дата истечения плана</span>
       <span class="expiration-date">{expirationDate}</span>
       <button class="renew-button">Обновить</button>
     </div>
-  </PageHeader>
 
   <div class="settings-grid">
     <!-- Основные настройки -->
