@@ -5,7 +5,7 @@ import type {
 	ResetPasswordRequest 
 } from '../types/auth.js';
 
-const API_BASE_URL = 'https://mars.dev.okto.ru:2000/v1'; // Auth service endpoint
+const API_BASE_URL = 'http://localhost:2000/v1'; // Auth service endpoint
 
 interface AuthTokenResponse {
 	auth_token: string;

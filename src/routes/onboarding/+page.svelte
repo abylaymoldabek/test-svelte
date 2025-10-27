@@ -135,21 +135,60 @@
     line-height: 1.5;
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 768px) {
     .onboarding-container {
-      padding: 24px 16px;
+      padding: 2rem 1rem;
     }
 
     h1 {
-      font-size: 24px;
+      font-size: 1.75rem;
     }
 
     .subtitle {
-      margin-bottom: 32px;
+      font-size: 1rem;
+      margin-bottom: 2rem;
     }
 
     .steps-container {
-      gap: 20px;
+      gap: 1.25rem;
+    }
+
+    .step-item {
+      gap: 1rem;
+    }
+
+    .step-content h3 {
+      font-size: 1rem;
+    }
+
+    .step-content p {
+      font-size: 0.875rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .onboarding-container {
+      padding: 1.5rem 0.75rem;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+    }
+
+    .subtitle {
+      margin-bottom: 1.5rem;
+    }
+
+    .steps-container {
+      gap: 1rem;
+    }
+
+    .step-content h3 {
+      font-size: 0.9rem;
+    }
+
+    .step-content p {
+      font-size: 0.8rem;
     }
   }
 </style>

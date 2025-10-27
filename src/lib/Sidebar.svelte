@@ -103,7 +103,7 @@
         <span class="icon">🔢</span>
         Data Matrix коды
       </a>
-    </li>
+    </li>  -->
     <li>
       <a 
         href="/settings" 
@@ -113,7 +113,7 @@
         <span class="icon">⚙️</span>
         Настройки компании
       </a>
-    </li> -->
+    </li>
   </ul>
 </nav>
 

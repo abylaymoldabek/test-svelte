@@ -602,6 +602,77 @@ th .sort-button.active {
   transform: translateY(-1px);
   box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
 }
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+  .products-page {
+    padding: 1rem;
+  }
+
+  .btn-add {
+    width: 100%;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .products-table {
+    font-size: 0.875rem;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: 0.5rem 0.25rem;
+    font-size: 0.8rem;
+  }
+
+  .products-table th:nth-child(n+4),
+  .products-table td:nth-child(n+4) {
+    display: none; /* Скрываем менее важные колонки */
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .pagination-button {
+    min-width: 40px;
+    min-height: 40px;
+    font-size: 0.875rem;
+  }
+
+  .pagination-info {
+    font-size: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .products-page {
+    padding: 0.75rem;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: 0.375rem 0.2rem;
+    font-size: 0.75rem;
+  }
+
+  .products-table th:nth-child(n+3),
+  .products-table td:nth-child(n+3) {
+    display: none; /* Показываем только название и действия */
+  }
+
+  .pagination-button {
+    min-width: 36px;
+    min-height: 36px;
+    font-size: 0.8rem;
+  }
+
+  .btn-add {
+    padding: 1rem;
+    font-size: 1rem;
+  }
+}
 </style>
 
 {#if $tokenPayload}

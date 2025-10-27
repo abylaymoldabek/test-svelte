@@ -84,7 +84,56 @@
   @media (max-width: 768px) {
     .main-content {
       margin-left: 0;
+      margin-top: 60px;
       padding: 1rem;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .main-content {
+      padding: 0.75rem;
+      margin-top: 50px;
+    }
+  }
+
+  /* Глобальные мобильные стили */
+  @media (max-width: 768px) {
+    :global(body) {
+      font-size: 14px;
+    }
+    
+    :global(h1) {
+      font-size: 1.5rem;
+    }
+    
+    :global(h2) {
+      font-size: 1.25rem;
+    }
+    
+    :global(h3) {
+      font-size: 1.125rem;
+    }
+    
+    :global(input, select, textarea) {
+      font-size: 16px !important; /* Предотвращает зум на iOS */
+    }
+    
+    :global(button) {
+      min-height: 44px; /* Минимальная область касания на мобильных */
+    }
+  }
+
+  @media (max-width: 480px) {
+    :global(h1) {
+      font-size: 1.25rem;
+    }
+    
+    :global(h2) {
+      font-size: 1.125rem;
+    }
+    
+    :global(h3) {
+      font-size: 1rem;
     }
   }
 </style>

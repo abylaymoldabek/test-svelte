@@ -328,13 +328,51 @@
 		text-decoration: underline;
 	}
 	
+	@media (max-width: 768px) {
+		.auth-container {
+			padding: 1rem;
+		}
+		
+		.auth-card {
+			padding: 2rem 1.5rem;
+			max-width: 100%;
+			margin: 0;
+		}
+		
+		.form-input {
+			font-size: 16px; /* Предотвращает зум на iOS */
+		}
+		
+		.submit-btn {
+			min-height: 48px;
+			font-size: 16px;
+		}
+		
+		.password-toggle {
+			min-width: 44px;
+			min-height: 44px;
+		}
+	}
+
 	@media (max-width: 480px) {
 		.auth-card {
-			padding: 30px 20px;
+			padding: 1.5rem 1rem;
 		}
 		
 		.auth-title {
-			font-size: 24px;
+			font-size: 1.5rem;
+		}
+		
+		.logo {
+			height: 28px;
+		}
+		
+		.form-input {
+			padding: 0.875rem;
+		}
+		
+		.submit-btn {
+			padding: 1rem;
 		}
 	}
 </style>

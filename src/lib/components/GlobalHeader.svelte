@@ -1,15 +1,35 @@
 <script lang="ts">
   import { tokenPayload } from '$lib/stores/token.js';
   import { authStore } from '$lib/stores/auth.js';
+  import { page } from '$app/stores';
+  
+  let isMobileMenuOpen = false;
   
   // Функция выхода
   function logout() {
     authStore.logout();
   }
+  
+  // Переключение мобильного меню
+  function toggleMobileMenu() {
+    isMobileMenuOpen = !isMobileMenuOpen;
+  }
+  
+  // Закрытие мобильного меню
+  function closeMobileMenu() {
+    isMobileMenuOpen = false;
+  }
 </script>
 
 <header class="global-header">
   <div class="header-content">
+    <!-- Burger меню для мобильных -->
+    <button class="burger-menu" on:click={toggleMobileMenu} aria-label="Меню">
+      <span class="burger-line" class:active={isMobileMenuOpen}></span>
+      <span class="burger-line" class:active={isMobileMenuOpen}></span>
+      <span class="burger-line" class:active={isMobileMenuOpen}></span>
+    </button>
+    
     <!-- Логотип -->
     <div class="logo-section">
       <img src="/okto-logo-original.png" alt="OKTO" class="logo" />
@@ -30,6 +50,38 @@
       </div>
     {/if}
   </div>
+  
+  <!-- Мобильное меню -->
+  {#if isMobileMenuOpen}
+    <div class="mobile-menu" class:open={isMobileMenuOpen}>
+      <nav class="mobile-nav">
+        <ul>
+          <li>
+            <a 
+              href="/reposts_vetis" 
+              class="mobile-nav-link"
+              class:active={$page.url.pathname === '/reposts_vetis'}
+              on:click={closeMobileMenu}
+            >
+              <span class="icon">📊</span>
+              Отчеты ВетИС
+            </a>
+          </li>
+          <li>
+            <a 
+              href="/settings" 
+              class="mobile-nav-link"
+              class:active={$page.url.pathname === '/settings'}
+              on:click={closeMobileMenu}
+            >
+              <span class="icon">⚙️</span>
+              Настройки компании
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  {/if}
 </header>
 
 <style>
@@ -63,12 +115,6 @@
   .logo {
     height: 32px;
     width: auto;
-  }
-
-  .logo-text {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: white;
   }
 
   .user-section {
@@ -119,14 +165,106 @@
     box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
   }
 
+  .burger-menu {
+    display: none;
+    flex-direction: column;
+    justify-content: space-around;
+    width: 24px;
+    height: 20px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1001;
+  }
+
+  .burger-line {
+    width: 100%;
+    height: 2px;
+    background-color: white;
+    transition: all 0.3s ease;
+    transform-origin: center;
+  }
+
+  .burger-line.active:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .burger-line.active:nth-child(2) {
+    opacity: 0;
+  }
+
+  .burger-line.active:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+  }
+
+  .mobile-menu {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    right: 0;
+    background: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 999;
+    max-height: calc(100vh - 60px);
+    overflow-y: auto;
+    display: none;
+  }
+
+  .mobile-menu.open {
+    display: block;
+  }
+
+  .mobile-nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 1rem;
+  }
+
+  .mobile-nav li {
+    margin-bottom: 0.5rem;
+  }
+
+  .mobile-nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #4b5563;
+    text-decoration: none;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .mobile-nav-link:hover {
+    background: #f3f4f6;
+    color: #4b4bc7;
+  }
+
+  .mobile-nav-link.active {
+    background: #4b4bc7;
+    color: white;
+  }
+
+  .mobile-nav-link .icon {
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .header-content {
       padding: 0 1rem;
     }
 
-    .logo-text {
-      font-size: 1.25rem;
+    .burger-menu {
+      display: flex;
     }
 
     .user-info {
@@ -147,8 +285,13 @@
       height: 24px;
     }
 
-    .logo-text {
-      font-size: 1rem;
+    .global-header {
+      height: 50px;
+    }
+
+    .mobile-menu {
+      top: 50px;
+      max-height: calc(100vh - 50px);
     }
   }
 </style>
