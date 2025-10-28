@@ -69,424 +69,469 @@
     loadVetisSettings();
   });
 
+  // Функция для получения UTC смещения для таймзоны
+  function getUTCOffset(timezone: string): string {
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en', {
+        timeZone: timezone,
+        timeZoneName: 'longOffset'
+      });
+      
+      const parts = formatter.formatToParts(now);
+      const offsetPart = parts.find(part => part.type === 'timeZoneName');
+      
+      if (offsetPart && offsetPart.value.startsWith('GMT')) {
+        const offset = offsetPart.value.replace('GMT', 'UTC');
+        return offset === 'UTC' ? 'UTC+0' : offset;
+      }
+      
+      // Fallback метод
+      const offsetMinutes = -now.getTimezoneOffset();
+      const utc = new Date(now.getTime() + offsetMinutes * 60000);
+      const target = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+      const diff = (target.getTime() - utc.getTime()) / (1000 * 60 * 60);
+      
+      if (diff === 0) return 'UTC+0';
+      const sign = diff > 0 ? '+' : '';
+      return `UTC${sign}${diff}`;
+    } catch (error) {
+      return '';
+    }
+  }
+
   var aryIanaTimeZones = [
-    { value: "Europe/Andorra", label: "Андорра" },
-    { value: "Asia/Dubai", label: "Дубай" },
-    { value: "Asia/Kabul", label: "Кабул" },
-    { value: "Europe/Tirane", label: "Тирана" },
-    { value: "Asia/Yerevan", label: "Ереван" },
-    { value: "Antarctica/Casey", label: "Кейси" },
-    { value: "Antarctica/Davis", label: "Дэвис" },
-    { value: "Antarctica/DumontDUrville", label: "Дюмон-дю-Виль" }, // https://bugs.chromium.org/p/chromium/issues/detail?id=928068
-    { value: "Antarctica/Mawson", label: "Моусон" },
-    { value: "Antarctica/Palmer", label: "Палмер" },
-    { value: "Antarctica/Rothera", label: "Ротера" },
-    { value: "Antarctica/Syowa", label: "Сёва" },
-    { value: "Antarctica/Troll", label: "Тролль" },
-    { value: "Antarctica/Vostok", label: "Восток" },
-    { value: "America/Argentina/Buenos_Aires", label: "Буэнос-Айрес" },
-    { value: "America/Argentina/Cordoba", label: "Кордоба" },
-    { value: "America/Argentina/Salta", label: "Сальта" },
-    { value: "America/Argentina/Jujuy", label: "Хухуй" },
-    { value: "America/Argentina/Tucuman", label: "Тукуман" },
-    { value: "America/Argentina/Catamarca", label: "Катамарка" },
-    { value: "America/Argentina/La_Rioja", label: "Ла-Риоха" },
-    { value: "America/Argentina/San_Juan", label: "Сан-Хуан" },
-    { value: "America/Argentina/Mendoza", label: "Мендоса" },
-    { value: "America/Argentina/San_Luis", label: "Сан-Луис" },
-    { value: "America/Argentina/Rio_Gallegos", label: "Рио-Галегос" },
-    { value: "America/Argentina/Ushuaia", label: "Ушуайя" },
-    { value: "Pacific/Pago_Pago", label: "Пагопаго" },
-    { value: "Europe/Vienna", label: "Вена" },
-    { value: "Australia/Lord_Howe", label: "Лорд-Хау" },
-    { value: "Antarctica/Macquarie", label: "Маккуори" },
-    { value: "Australia/Hobart", label: "Хобарт" },
-    { value: "Australia/Currie", label: "Курри" },
-    { value: "Australia/Melbourne", label: "Мельбурн" },
-    { value: "Australia/Sydney", label: "Сидней" },
-    { value: "Australia/Broken_Hill", label: "Брокен-Хилл" },
-    { value: "Australia/Brisbane", label: "Брисбен" },
-    { value: "Australia/Lindeman", label: "Линдеман" },
-    { value: "Australia/Adelaide", label: "Аделаида" },
-    { value: "Australia/Darwin", label: "Дарвин" },
-    { value: "Australia/Perth", label: "Перт" },
-    { value: "Australia/Eucla", label: "Евкла" },
-    { value: "Asia/Baku", label: "Баку" },
-    { value: "America/Barbados", label: "Барбадос" },
-    { value: "Asia/Dhaka", label: "Дакка" },
-    { value: "Europe/Brussels", label: "Брюссель" },
-    { value: "Europe/Sofia", label: "София" },
-    { value: "Atlantic/Bermuda", label: "Бермуды" },
-    { value: "Asia/Brunei", label: "Бруней" },
-    { value: "America/La_Paz", label: "Ла-Пас" },
-    { value: "America/Noronha", label: "Норона" },
-    { value: "America/Belem", label: "Белем" },
-    { value: "America/Fortaleza", label: "Форталеза" },
-    { value: "America/Recife", label: "Ресифи" },
-    { value: "America/Araguaina", label: "Арагвайна" },
-    { value: "America/Maceio", label: "Масейо" },
-    { value: "America/Bahia", label: "Баия" },
-    { value: "America/Sao_Paulo", label: "Сан-Паулу" },
-    { value: "America/Campo_Grande", label: "Кампу-Гранде" },
-    { value: "America/Cuiaba", label: "Куяба" },
-    { value: "America/Santarem", label: "Сантарен" },
-    { value: "America/Porto_Velho", label: "Порту-Велью" },
-    { value: "America/Boa_Vista", label: "Боа-Виста" },
-    { value: "America/Manaus", label: "Манаус" },
-    { value: "America/Eirunepe", label: "Эйрунепе" },
-    { value: "America/Rio_Branco", label: "Рио-Бранко" },
-    { value: "America/Nassau", label: "Нассау" },
-    { value: "Asia/Thimphu", label: "Тхимпху" },
-    { value: "Europe/Minsk", label: "Минск" },
-    { value: "America/Belize", label: "Белиз" },
-    { value: "America/St_Johns", label: "Сент-Джонс" },
-    { value: "America/Halifax", label: "Галифакс" },
-    { value: "America/Glace_Bay", label: "Глейс-Бей" },
-    { value: "America/Moncton", label: "Монктон" },
-    { value: "America/Goose_Bay", label: "Гус-Бей" },
-    { value: "America/Blanc-Sablon", label: "Бланк-Саблон" },
-    { value: "America/Toronto", label: "Торонто" },
-    { value: "America/Nipigon", label: "Нипигон" },
-    { value: "America/Thunder_Bay", label: "Тандер-Бей" },
-    { value: "America/Iqaluit", label: "Икалуит" },
-    { value: "America/Pangnirtung", label: "Пангниртунг" },
-    { value: "America/Atikokan", label: "Атикокан" },
-    { value: "America/Winnipeg", label: "Виннипег" },
-    { value: "America/Rainy_River", label: "Рейни-Ривер" },
-    { value: "America/Resolute", label: "Резолют" },
-    { value: "America/Rankin_Inlet", label: "Ранкин-Инлет" },
-    { value: "America/Regina", label: "Регина" },
-    { value: "America/Swift_Current", label: "Свифт-Керрент" },
-    { value: "America/Edmonton", label: "Эдмонтон" },
-    { value: "America/Cambridge_Bay", label: "Кембридж-Бей" },
-    { value: "America/Yellowknife", label: "Йеллоунайф" },
-    { value: "America/Inuvik", label: "Инуvik" },
-    { value: "America/Creston", label: "Крестон" },
-    { value: "America/Dawson_Creek", label: "Досон-Крик" },
-    { value: "America/Fort_Nelson", label: "Форт-Нелсон" },
-    { value: "America/Vancouver", label: "Ванкувер" },
-    { value: "America/Whitehorse", label: "Уайтхорс" },
-    { value: "America/Dawson", label: "Досон" },
-    { value: "Indian/Cocos", label: "Кокосовые острова" },
-    { value: "Europe/Zurich", label: "Цюрих" },
-    { value: "Africa/Abidjan", label: "Абиджан" },
-    { value: "Pacific/Rarotonga", label: "Раротонга" },
-    { value: "America/Santiago", label: "Сантьяго" },
-    { value: "America/Punta_Arenas", label: "Пунта-Аренас" },
-    { value: "Pacific/Easter", label: "Остров Пасхи" },
-    { value: "Asia/Shanghai", label: "Шанхай" },
-    { value: "Asia/Urumqi", label: "Урумчи" },
-    { value: "America/Bogota", label: "Богота" },
-    { value: "America/Costa_Rica", label: "Коста-Рика" },
-    { value: "America/Havana", label: "Гавана" },
-    { value: "Atlantic/Cape_Verde", label: "Кабо-Верде" },
-    { value: "America/Curacao", label: "Кюрасао" },
-    { value: "Indian/Christmas", label: "Остров Рождества" },
-    { value: "Asia/Nicosia", label: "Никосия" },
-    { value: "Asia/Famagusta", label: "Фамагуста" },
-    { value: "Europe/Prague", label: "Прага" },
-    { value: "Europe/Berlin", label: "Берлин" },
-    { value: "Europe/Copenhagen", label: "Копенгаген" },
-    { value: "America/Santo_Domingo", label: "Санто-Доминго" },
-    { value: "Africa/Algiers", label: "Алжир" },
-    { value: "America/Guayaquil", label: "Гуаякиль" },
-    { value: "Pacific/Galapagos", label: "Галапагосские острова" },
-    { value: "Europe/Tallinn", label: "Таллин" },
-    { value: "Africa/Cairo", label: "Каир" },
-    { value: "Africa/El_Aaiun", label: "Эль-Аюн" },
-    { value: "Europe/Madrid", label: "Мадрид" },
-    { value: "Africa/Ceuta", label: "Сеута" },
-    { value: "Atlantic/Canary", label: "Канарские острова" },
-    { value: "Europe/Helsinki", label: "Хельсинки" },
-    { value: "Pacific/Fiji", label: "Фиджи" },
-    { value: "Atlantic/Stanley", label: "Стэнли" },
-    { value: "Pacific/Chuuk", label: "Чуук" },
-    { value: "Pacific/Pohnpei", label: "Понпеи" },
-    { value: "Pacific/Kosrae", label: "Косраэ" },
-    { value: "Atlantic/Faroe", label: "Фарерские острова" },
-    { value: "Europe/Paris", label: "Париж" },
-    { value: "Europe/London", label: "Лондон" },
-    { value: "Asia/Tbilisi", label: "Тбилиси" },
-    { value: "America/Cayenne", label: "Кайенна" },
-    { value: "Africa/Accra", label: "Аккра" },
-    { value: "Europe/Gibraltar", label: "Гибралтар" },
-    { value: "America/Godthab", label: "Готхоб" },
-    { value: "America/Danmarkshavn", label: "Данмарксхавн" },
-    { value: "America/Scoresbysund", label: "Скоресбисунн" },
-    { value: "America/Thule", label: "Туле" },
-    { value: "Europe/Athens", label: "Афины" },
-    { value: "Atlantic/South_Georgia", label: "Южная Георгия" },
-    { value: "America/Guatemala", label: "Гватемала" },
-    { value: "Pacific/Guam", label: "Гуам" },
-    { value: "Africa/Bissau", label: "Бисау" },
-    { value: "America/Guyana", label: "Гайана" },
-    { value: "Asia/Hong_Kong", label: "Гонконг" },
-    { value: "America/Tegucigalpa", label: "Тегусигальпа" },
-    { value: "America/Port-au-Prince", label: "Порт-о-Пренс" },
-    { value: "Europe/Budapest", label: "Будапешт" },
-    { value: "Asia/Jakarta", label: "Джакарта" },
-    { value: "Asia/Pontianak", label: "Понтианак" },
-    { value: "Asia/Makassar", label: "Макассар" },
-    { value: "Asia/Jayapura", label: "Джаяпура" },
-    { value: "Europe/Dublin", label: "Дублин" },
-    { value: "Asia/Jerusalem", label: "Иерусалим" },
-    { value: "Asia/Kolkata", label: "Калькутта" },
-    { value: "Indian/Chagos", label: "Чагос" },
-    { value: "Asia/Baghdad", label: "Багдад" },
-    { value: "Asia/Tehran", label: "Тегеран" },
-    { value: "Atlantic/Reykjavik", label: "Рейкьявик" },
-    { value: "Europe/Rome", label: "Рим" },
-    { value: "America/Jamaica", label: "Ямайка" },
-    { value: "Asia/Amman", label: "Амман" },
-    { value: "Asia/Tokyo", label: "Токио" },
-    { value: "Africa/Nairobi", label: "Найроби" },
-    { value: "Asia/Bishkek", label: "Бишкек" },
-    { value: "Pacific/Tarawa", label: "Тарава" },
-    { value: "Pacific/Enderbury", label: "Эндербери" },
-    { value: "Pacific/Kiritimati", label: "Киритимати" },
-    { value: "Asia/Pyongyang", label: "Пхеньян" },
-    { value: "Asia/Seoul", label: "Сеул" },
-    { value: "Asia/Almaty", label: "Алматы" },
-    { value: "Asia/Qyzylorda", label: "Кызылорда" },
-    { value: "Asia/Qostanay", label: "Костанай" },
-    { value: "Asia/Aqtobe", label: "Актобе" },
-    { value: "Asia/Aqtau", label: "Актау" },
-    { value: "Asia/Atyrau", label: "Атырау" },
-    { value: "Asia/Oral", label: "Орал" },
+    { value: "Europe/Andorra", label: `Андорра (${getUTCOffset("Europe/Andorra")})` },
+    { value: "Asia/Dubai", label: `Дубай (${getUTCOffset("Asia/Dubai")})` },
+    { value: "Asia/Kabul", label: `Кабул (${getUTCOffset("Asia/Kabul")})` },
+    { value: "Europe/Tirane", label: `Тирана (${getUTCOffset("Europe/Tirane")})` },
+    { value: "Asia/Yerevan", label: `Ереван (${getUTCOffset("Asia/Yerevan")})` },
+    { value: "Europe/Moscow", label: `Москва (${getUTCOffset("Europe/Moscow")})` },
+    { value: "Asia/Almaty", label: `Алматы (${getUTCOffset("Asia/Almaty")})` },
+    { value: "Asia/Tashkent", label: `Ташкент (${getUTCOffset("Asia/Tashkent")})` },
+    { value: "Europe/Kiev", label: `Киев (${getUTCOffset("Europe/Kiev")})` },
+    { value: "Europe/Minsk", label: `Минск (${getUTCOffset("Europe/Minsk")})` },
+    { value: "Europe/London", label: `Лондон (${getUTCOffset("Europe/London")})` },
+    { value: "Europe/Paris", label: `Париж (${getUTCOffset("Europe/Paris")})` },
+    { value: "Europe/Berlin", label: `Берлин (${getUTCOffset("Europe/Berlin")})` },
+    { value: "America/New_York", label: `Нью-Йорк (${getUTCOffset("America/New_York")})` },
+    { value: "America/Los_Angeles", label: `Лос-Анджелес (${getUTCOffset("America/Los_Angeles")})` },
+    { value: "Asia/Tokyo", label: `Токио (${getUTCOffset("Asia/Tokyo")})` },
+    { value: "Asia/Shanghai", label: `Шанхай (${getUTCOffset("Asia/Shanghai")})` },
+    { value: "Australia/Sydney", label: `Сидней (${getUTCOffset("Australia/Sydney")})` },
+    { value: "Pacific/Auckland", label: `Окленд (${getUTCOffset("Pacific/Auckland")})` },
+    { value: "Antarctica/Casey", label: `Кейси (${getUTCOffset("Antarctica/Casey")})` },
+    { value: "Antarctica/Davis", label: `Дэвис (${getUTCOffset("Antarctica/Davis")})` },
+    { value: "Antarctica/DumontDUrville", label: `Дюмон-дю-Виль (${getUTCOffset("Antarctica/DumontDUrville")})` }, // https://bugs.chromium.org/p/chromium/issues/detail?id=928068
+    { value: "Antarctica/Mawson", label: `Моусон (${getUTCOffset("Antarctica/Mawson")})` },
+    { value: "Antarctica/Palmer", label: `Палмер (${getUTCOffset("Antarctica/Palmer")})` },
+    { value: "Antarctica/Rothera", label: `Ротера (${getUTCOffset("Antarctica/Rothera")})` },
+    { value: "Antarctica/Syowa", label: `Сёва (${getUTCOffset("Antarctica/Syowa")})` },
+    { value: "Antarctica/Troll", label: `Тролль (${getUTCOffset("Antarctica/Troll")})` },
+    { value: "Antarctica/Vostok", label: `Восток (${getUTCOffset("Antarctica/Vostok")})` },
+    { value: "America/Argentina/Buenos_Aires", label: `Буэнос-Айрес (${getUTCOffset("America/Argentina/Buenos_Aires")})` },
+    { value: "America/Argentina/Cordoba", label: `Кордоба (${getUTCOffset("America/Argentina/Cordoba")})` },
+    { value: "America/Argentina/Salta", label: `Сальта (${getUTCOffset("America/Argentina/Salta")})` },
+    { value: "America/Argentina/Jujuy", label: `Хухуй (${getUTCOffset("America/Argentina/Jujuy")})` },
+    { value: "America/Argentina/Tucuman", label: `Тукуман (${getUTCOffset("America/Argentina/Tucuman")})` },
+    { value: "America/Argentina/Catamarca", label: `Катамарка (${getUTCOffset("America/Argentina/Catamarca")})` },
+    { value: "America/Argentina/La_Rioja", label: `Ла-Риоха (${getUTCOffset("America/Argentina/La_Rioja")})` },
+    { value: "America/Argentina/San_Juan", label: `Сан-Хуан (${getUTCOffset("America/Argentina/San_Juan")})` },
+    { value: "America/Argentina/Mendoza", label: `Мендоса (${getUTCOffset("America/Argentina/Mendoza")})` },
+    { value: "America/Argentina/San_Luis", label: `Сан-Луис (${getUTCOffset("America/Argentina/San_Luis")})` },
+    { value: "America/Argentina/Rio_Gallegos", label: `Рио-Галегос (${getUTCOffset("America/Argentina/Rio_Gallegos")})` },
+    { value: "America/Argentina/Ushuaia", label: `Ушуайя (${getUTCOffset("America/Argentina/Ushuaia")})` },
+    { value: "Pacific/Pago_Pago", label: `Пагопаго (${getUTCOffset("Pacific/Pago_Pago")})` },
+    { value: "Europe/Vienna", label: `Вена (${getUTCOffset("Europe/Vienna")})` },
+    { value: "Australia/Lord_Howe", label: `Лорд-Хау (${getUTCOffset("Australia/Lord_Howe")})` },
+    { value: "Antarctica/Macquarie", label: `Маккуори (${getUTCOffset("Antarctica/Macquarie")})` },
+    { value: "Australia/Hobart", label: `Хобарт (${getUTCOffset("Australia/Hobart")})` },
+    { value: "Australia/Currie", label: `Курри (${getUTCOffset("Australia/Currie")})` },
+    { value: "Australia/Melbourne", label: `Мельбурн (${getUTCOffset("Australia/Melbourne")})` },
+    { value: "Australia/Sydney", label: `Сидней (${getUTCOffset("Australia/Sydney")})` },
+    { value: "Australia/Broken_Hill", label: `Брокен-Хилл (${getUTCOffset("Australia/Broken_Hill")})` },
+    { value: "Australia/Brisbane", label: `Брисбен (${getUTCOffset("Australia/Brisbane")})` },
+    { value: "Australia/Lindeman", label: `Линдеман (${getUTCOffset("Australia/Lindeman")})` },
+    { value: "Australia/Adelaide", label: `Аделаида (${getUTCOffset("Australia/Adelaide")})` },
+    { value: "Australia/Darwin", label: `Дарвин (${getUTCOffset("Australia/Darwin")})` },
+    { value: "Australia/Perth", label: `Перт (${getUTCOffset("Australia/Perth")})` },
+    { value: "Australia/Eucla", label: `Евкла (${getUTCOffset("Australia/Eucla")})` },
+    { value: "Asia/Baku", label: `Баку (${getUTCOffset("Asia/Baku")})` },
+    { value: "America/Barbados", label: `Барбадос (${getUTCOffset("America/Barbados")})` },
+    { value: "Asia/Dhaka", label: `Дакка (${getUTCOffset("Asia/Dhaka")})` },
+    { value: "Europe/Brussels", label: `Брюссель (${getUTCOffset("Europe/Brussels")})` },
+    { value: "Europe/Sofia", label: `София (${getUTCOffset("Europe/Sofia")})` },
+    { value: "Atlantic/Bermuda", label: `Бермуды (${getUTCOffset("Atlantic/Bermuda")})` },
+    { value: "Asia/Brunei", label: `Бруней (${getUTCOffset("Asia/Brunei")})` },
+    { value: "America/La_Paz", label: `Ла-Пас (${getUTCOffset("America/La_Paz")})` },
+    { value: "America/Noronha", label: `Норона (${getUTCOffset("America/Noronha")})` },
+    { value: "America/Belem", label: `Белем (${getUTCOffset("America/Belem")})` },
+    { value: "America/Fortaleza", label: `Форталеза (${getUTCOffset("America/Fortaleza")})` },
+    { value: "America/Recife", label: `Ресифи (${getUTCOffset("America/Recife")})` },
+    { value: "America/Araguaina", label: `Арагвайна (${getUTCOffset("America/Araguaina")})` },
+    { value: "America/Maceio", label: `Масейо (${getUTCOffset("America/Maceio")})` },
+    { value: "America/Bahia", label: `Баия (${getUTCOffset("America/Bahia")})` },
+    { value: "America/Sao_Paulo", label: `Сан-Паулу (${getUTCOffset("America/Sao_Paulo")})` },
+    { value: "America/Campo_Grande", label: `Кампу-Гранде (${getUTCOffset("America/Campo_Grande")})` },
+    { value: "America/Cuiaba", label: `Куяба (${getUTCOffset("America/Cuiaba")})` },
+    { value: "America/Santarem", label: `Сантарен (${getUTCOffset("America/Santarem")})` },
+    { value: "America/Porto_Velho", label: `Порту-Велью (${getUTCOffset("America/Porto_Velho")})` },
+    { value: "America/Boa_Vista", label: `Боа-Виста (${getUTCOffset("America/Boa_Vista")})` },
+    { value: "America/Manaus", label: `Манаус (${getUTCOffset("America/Manaus")})` },
+    { value: "America/Eirunepe", label: `Эйрунепе (${getUTCOffset("America/Eirunepe")})` },
+    { value: "America/Rio_Branco", label: `Рио-Бранко (${getUTCOffset("America/Rio_Branco")})` },
+    { value: "America/Nassau", label: `Нассау (${getUTCOffset("America/Nassau")})` },
+    { value: "Asia/Thimphu", label: `Тхимпху (${getUTCOffset("Asia/Thimphu")})` },
+    { value: "Europe/Minsk", label: `Минск (${getUTCOffset("Europe/Minsk")})` },
+    { value: "America/Belize", label: `Белиз (${getUTCOffset("America/Belize")})` },
+    { value: "America/St_Johns", label: `Сент-Джонс (${getUTCOffset("America/St_Johns")})` },
+    { value: "America/Halifax", label: `Галифакс (${getUTCOffset("America/Halifax")})` },
+    { value: "America/Glace_Bay", label: `Глейс-Бей (${getUTCOffset("America/Glace_Bay")})` },
+    { value: "America/Moncton", label: `Монктон (${getUTCOffset("America/Moncton")})` },
+    { value: "America/Goose_Bay", label: `Гус-Бей (${getUTCOffset("America/Goose_Bay")})` },
+    { value: "America/Blanc-Sablon", label: `Бланк-Саблон (${getUTCOffset("America/Blanc-Sablon")})` },
+    { value: "America/Toronto", label: `Торонто (${getUTCOffset("America/Toronto")})` },
+    { value: "America/Nipigon", label: `Нипигон (${getUTCOffset("America/Nipigon")})` },
+    { value: "America/Thunder_Bay", label: `Тандер-Бей (${getUTCOffset("America/Thunder_Bay")})` },
+    { value: "America/Iqaluit", label: `Икалуит (${getUTCOffset("America/Iqaluit")})` },
+    { value: "America/Pangnirtung", label: `Пангниртунг (${getUTCOffset("America/Pangnirtung")})` },
+    { value: "America/Atikokan", label: `Атикокан (${getUTCOffset("America/Atikokan")})` },
+    { value: "America/Winnipeg", label: `Виннипег (${getUTCOffset("America/Winnipeg")})` },
+    { value: "America/Rainy_River", label: `Рейни-Ривер (${getUTCOffset("America/Rainy_River")})` },
+    { value: "America/Resolute", label: `Резолют (${getUTCOffset("America/Resolute")})` },
+    { value: "America/Rankin_Inlet", label: `Ранкин-Инлет (${getUTCOffset("America/Rankin_Inlet")})` },
+    { value: "America/Regina", label: `Регина (${getUTCOffset("America/Regina")})` },
+    { value: "America/Swift_Current", label: `Свифт-Керрент (${getUTCOffset("America/Swift_Current")})` },
+    { value: "America/Edmonton", label: `Эдмонтон (${getUTCOffset("America/Edmonton")})` },
+    { value: "America/Cambridge_Bay", label: `Кембридж-Бей (${getUTCOffset("America/Cambridge_Bay")})` },
+    { value: "America/Yellowknife", label: `Йеллоунайф (${getUTCOffset("America/Yellowknife")})` },
+    { value: "America/Inuvik", label: `Инуvik (${getUTCOffset("America/Inuvik")})` },
+    { value: "America/Creston", label: `Крестон (${getUTCOffset("America/Creston")})` },
+    { value: "America/Dawson_Creek", label: `Досон-Крик (${getUTCOffset("America/Dawson_Creek")})` },
+    { value: "America/Fort_Nelson", label: `Форт-Нелсон (${getUTCOffset("America/Fort_Nelson")})` },
+    { value: "America/Vancouver", label: `Ванкувер (${getUTCOffset("America/Vancouver")})` },
+    { value: "America/Whitehorse", label: `Уайтхорс (${getUTCOffset("America/Whitehorse")})` },
+    { value: "America/Dawson", label: `Досон (${getUTCOffset("America/Dawson")})` },
+    { value: "Indian/Cocos", label: `Кокосовые острова (${getUTCOffset("Indian/Cocos")})` },
+    { value: "Europe/Zurich", label: `Цюрих (${getUTCOffset("Europe/Zurich")})` },
+    { value: "Africa/Abidjan", label: `Абиджан (${getUTCOffset("Africa/Abidjan")})` },
+    { value: "Pacific/Rarotonga", label: `Раротонга (${getUTCOffset("Pacific/Rarotonga")})` },
+    { value: "America/Santiago", label: `Сантьяго (${getUTCOffset("America/Santiago")})` },
+    { value: "America/Punta_Arenas", label: `Пунта-Аренас (${getUTCOffset("America/Punta_Arenas")})` },
+    { value: "Pacific/Easter", label: `Остров Пасхи (${getUTCOffset("Pacific/Easter")})` },
+    { value: "Asia/Shanghai", label: `Шанхай (${getUTCOffset("Asia/Shanghai")})` },
+    { value: "Asia/Urumqi", label: `Урумчи (${getUTCOffset("Asia/Urumqi")})` },
+    { value: "America/Bogota", label: `Богота (${getUTCOffset("America/Bogota")})` },
+  { value: "America/Costa_Rica", label: `Коста-Рика (${getUTCOffset("America/Costa_Rica")})` },
+  { value: "America/Havana", label: `Гавана (${getUTCOffset("America/Havana")})` },
+  { value: "Atlantic/Cape_Verde", label: `Кабо-Верде (${getUTCOffset("Atlantic/Cape_Verde")})` },
+  { value: "America/Curacao", label: `Кюрасао (${getUTCOffset("America/Curacao")})` },
+  { value: "Indian/Christmas", label: `Остров Рождества (${getUTCOffset("Indian/Christmas")})` },
+  { value: "Asia/Nicosia", label: `Никосия (${getUTCOffset("Asia/Nicosia")})` },
+  { value: "Asia/Famagusta", label: `Фамагуста (${getUTCOffset("Asia/Famagusta")})` },
+  { value: "Europe/Prague", label: `Прага (${getUTCOffset("Europe/Prague")})` },
+  { value: "Europe/Berlin", label: `Берлин (${getUTCOffset("Europe/Berlin")})` },
+  { value: "Europe/Copenhagen", label: `Копенгаген (${getUTCOffset("Europe/Copenhagen")})` },
+  { value: "America/Santo_Domingo", label: `Санто-Доминго (${getUTCOffset("America/Santo_Domingo")})` },
+  { value: "Africa/Algiers", label: `Алжир (${getUTCOffset("Africa/Algiers")})` },
+  { value: "America/Guayaquil", label: `Гуаякиль (${getUTCOffset("America/Guayaquil")})` },
+  { value: "Pacific/Galapagos", label: `Галапагосские острова (${getUTCOffset("Pacific/Galapagos")})` },
+  { value: "Europe/Tallinn", label: `Таллин (${getUTCOffset("Europe/Tallinn")})` },
+  { value: "Africa/Cairo", label: `Каир (${getUTCOffset("Africa/Cairo")})` },
+  { value: "Africa/El_Aaiun", label: `Эль-Аюн (${getUTCOffset("Africa/El_Aaiun")})` },
+  { value: "Europe/Madrid", label: `Мадрид (${getUTCOffset("Europe/Madrid")})` },
+  { value: "Africa/Ceuta", label: `Сеута (${getUTCOffset("Africa/Ceuta")})` },
+  { value: "Atlantic/Canary", label: `Канарские острова (${getUTCOffset("Atlantic/Canary")})` },
+  { value: "Europe/Helsinki", label: `Хельсинки (${getUTCOffset("Europe/Helsinki")})` },
+  { value: "Pacific/Fiji", label: `Фиджи (${getUTCOffset("Pacific/Fiji")})` },
+  { value: "Atlantic/Stanley", label: `Стэнли (${getUTCOffset("Atlantic/Stanley")})` },
+  { value: "Pacific/Chuuk", label: `Чуук (${getUTCOffset("Pacific/Chuuk")})` },
+  { value: "Pacific/Pohnpei", label: `Понпеи (${getUTCOffset("Pacific/Pohnpei")})` },
+  { value: "Pacific/Kosrae", label: `Косраэ (${getUTCOffset("Pacific/Kosrae")})` },
+  { value: "Atlantic/Faroe", label: `Фарерские острова (${getUTCOffset("Atlantic/Faroe")})` },
+  { value: "Europe/Paris", label: `Париж (${getUTCOffset("Europe/Paris")})` },
+  { value: "Europe/London", label: `Лондон (${getUTCOffset("Europe/London")})` },
+  { value: "Asia/Tbilisi", label: `Тбилиси (${getUTCOffset("Asia/Tbilisi")})` },
+  { value: "America/Cayenne", label: `Кайенна (${getUTCOffset("America/Cayenne")})` },
+  { value: "Africa/Accra", label: `Аккра (${getUTCOffset("Africa/Accra")})` },
+  { value: "Europe/Gibraltar", label: `Гибралтар (${getUTCOffset("Europe/Gibraltar")})` },
+  { value: "America/Godthab", label: `Готхоб (${getUTCOffset("America/Godthab")})` },
+  { value: "America/Danmarkshavn", label: `Данмарксхавн (${getUTCOffset("America/Danmarkshavn")})` },
+  { value: "America/Scoresbysund", label: `Скоресбисунн (${getUTCOffset("America/Scoresbysund")})` },
+  { value: "America/Thule", label: `Туле (${getUTCOffset("America/Thule")})` },
+  { value: "Europe/Athens", label: `Афины (${getUTCOffset("Europe/Athens")})` },
+  { value: "Atlantic/South_Georgia", label: `Южная Георгия (${getUTCOffset("Atlantic/South_Georgia")})` },
+  { value: "America/Guatemala", label: `Гватемала (${getUTCOffset("America/Guatemala")})` },
+  { value: "Pacific/Guam", label: `Гуам (${getUTCOffset("Pacific/Guam")})` },
+  { value: "Africa/Bissau", label: `Бисау (${getUTCOffset("Africa/Bissau")})` },
+  { value: "America/Guyana", label: `Гайана (${getUTCOffset("America/Guyana")})` },
+  { value: "Asia/Hong_Kong", label: `Гонконг (${getUTCOffset("Asia/Hong_Kong")})` },
+  { value: "America/Tegucigalpa", label: `Тегусигальпа (${getUTCOffset("America/Tegucigalpa")})` },
+  { value: "America/Port-au-Prince", label: `Порт-о-Пренс (${getUTCOffset("America/Port-au-Prince")})` },
+  { value: "Europe/Budapest", label: `Будапешт (${getUTCOffset("Europe/Budapest")})` },
+  { value: "Asia/Jakarta", label: `Джакарта (${getUTCOffset("Asia/Jakarta")})` },
+  { value: "Asia/Pontianak", label: `Понтианак (${getUTCOffset("Asia/Pontianak")})` },
+  { value: "Asia/Makassar", label: `Макассар (${getUTCOffset("Asia/Makassar")})` },
+  { value: "Asia/Jayapura", label: `Джаяпура (${getUTCOffset("Asia/Jayapura")})` },
+  { value: "Europe/Dublin", label: `Дублин (${getUTCOffset("Europe/Dublin")})` },
+  { value: "Asia/Jerusalem", label: `Иерусалим (${getUTCOffset("Asia/Jerusalem")})` },
+  { value: "Asia/Kolkata", label: `Калькутта (${getUTCOffset("Asia/Kolkata")})` },
+  { value: "Indian/Chagos", label: `Чагос (${getUTCOffset("Indian/Chagos")})` },
+  { value: "Asia/Baghdad", label: `Багдад (${getUTCOffset("Asia/Baghdad")})` },
+  { value: "Asia/Tehran", label: `Тегеран (${getUTCOffset("Asia/Tehran")})` },
+  { value: "Atlantic/Reykjavik", label: `Рейкьявик (${getUTCOffset("Atlantic/Reykjavik")})` },
+  { value: "Europe/Rome", label: `Рим (${getUTCOffset("Europe/Rome")})` },
+  { value: "America/Jamaica", label: `Ямайка (${getUTCOffset("America/Jamaica")})` },
+  { value: "Asia/Amman", label: `Амман (${getUTCOffset("Asia/Amman")})` },
+  { value: "Asia/Tokyo", label: `Токио (${getUTCOffset("Asia/Tokyo")})` },
+  { value: "Africa/Nairobi", label: `Найроби (${getUTCOffset("Africa/Nairobi")})` },
+  { value: "Asia/Bishkek", label: `Бишкек (${getUTCOffset("Asia/Bishkek")})` },
+  { value: "Pacific/Tarawa", label: `Тарава (${getUTCOffset("Pacific/Tarawa")})` },
+  { value: "Pacific/Enderbury", label: `Эндербери (${getUTCOffset("Pacific/Enderbury")})` },
+  { value: "Pacific/Kiritimati", label: `Киритимати (${getUTCOffset("Pacific/Kiritimati")})` },
+  { value: "Asia/Pyongyang", label: `Пхеньян (${getUTCOffset("Asia/Pyongyang")})` },
+  { value: "Asia/Seoul", label: `Сеул (${getUTCOffset("Asia/Seoul")})` },
+  { value: "Asia/Almaty", label: `Алматы (${getUTCOffset("Asia/Almaty")})` },
+  { value: "Asia/Qyzylorda", label: `Кызылорда (${getUTCOffset("Asia/Qyzylorda")})` },
+  { value: "Asia/Qostanay", label: `Костанай (${getUTCOffset("Asia/Qostanay")})` },
+  { value: "Asia/Aqtobe", label: `Актобе (${getUTCOffset("Asia/Aqtobe")})` },
+  { value: "Asia/Aqtau", label: `Актау (${getUTCOffset("Asia/Aqtau")})` },
+  { value: "Asia/Atyrau", label: `Атырау (${getUTCOffset("Asia/Atyrau")})` },
+  { value: "Asia/Oral", label: `Орал (${getUTCOffset("Asia/Oral")})` },
+  { value: "Asia/Beirut", label: `Бейрут (${getUTCOffset("Asia/Beirut")})` },
+  { value: "Asia/Colombo", label: `Коломбо (${getUTCOffset("Asia/Colombo")})` },
+  { value: "Africa/Monrovia", label: `Монровия (${getUTCOffset("Africa/Monrovia")})` },
+  { value: "America/Santo_Domingo", label: `Санто-Доминго (${getUTCOffset("America/Santo_Domingo")})` },
+  { value: "Africa/Algiers", label: `Алжир (${getUTCOffset("Africa/Algiers")})` },
+  { value: "America/Guayaquil", label: `Гуаякиль (${getUTCOffset("America/Guayaquil")})` },
+  { value: "Pacific/Galapagos", label: `Галапагос (${getUTCOffset("Pacific/Galapagos")})` },
+  { value: "Europe/Tallinn", label: `Таллин (${getUTCOffset("Europe/Tallinn")})` },
+  { value: "Africa/Cairo", label: `Каир (${getUTCOffset("Africa/Cairo")})` },
+  { value: "Africa/El_Aaiun", label: `Эль-Аайун (${getUTCOffset("Africa/El_Aaiun")})` },
+  { value: "Europe/Madrid", label: `Мадрид (${getUTCOffset("Europe/Madrid")})` },
+  { value: "Africa/Ceuta", label: `Сеута (${getUTCOffset("Africa/Ceuta")})` },
+  { value: "Atlantic/Canary", label: `Канарские острова (${getUTCOffset("Atlantic/Canary")})` },
+  { value: "Europe/Helsinki", label: `Хельсинки (${getUTCOffset("Europe/Helsinki")})` },
+  { value: "Pacific/Fiji", label: `Фиджи (${getUTCOffset("Pacific/Fiji")})` },
+  { value: "Atlantic/Stanley", label: `Стэнли (${getUTCOffset("Atlantic/Stanley")})` },
+  { value: "Pacific/Chuuk", label: `Чуук (${getUTCOffset("Pacific/Chuuk")})` },
+  { value: "Pacific/Pohnpei", label: `Понпеи (${getUTCOffset("Pacific/Pohnpei")})` },
+  { value: "Pacific/Kosrae", label: `Косраэ (${getUTCOffset("Pacific/Kosrae")})` },
+  { value: "Atlantic/Faroe", label: `Фарерские острова (${getUTCOffset("Atlantic/Faroe")})` },
+  { value: "Europe/Paris", label: `Париж (${getUTCOffset("Europe/Paris")})` },
+  { value: "Europe/London", label: `Лондон (${getUTCOffset("Europe/London")})` },
+  { value: "Asia/Tbilisi", label: `Тбилиси (${getUTCOffset("Asia/Tbilisi")})` },
+  { value: "America/Cayenne", label: `Кайенна (${getUTCOffset("America/Cayenne")})` },
+  { value: "Africa/Accra", label: `Аккра (${getUTCOffset("Africa/Accra")})` },
+  { value: "Europe/Gibraltar", label: `Гибралтар (${getUTCOffset("Europe/Gibraltar")})` },
+  { value: "America/Godthab", label: `Годтхаб (${getUTCOffset("America/Godthab")})` },
+  { value: "America/Danmarkshavn", label: `Данмарксхавн (${getUTCOffset("America/Danmarkshavn")})` },
+  { value: "America/Scoresbysund", label: `Скорсбисун (${getUTCOffset("America/Scoresbysund")})` },
+  { value: "America/Thule", label: `Туле (${getUTCOffset("America/Thule")})` },
+  { value: "Europe/Athens", label: `Афины (${getUTCOffset("Europe/Athens")})` },
+  { value: "Atlantic/South_Georgia", label: `Южная Георгия (${getUTCOffset("Atlantic/South_Georgia")})` },
+  { value: "America/Guatemala", label: `Гватемала (${getUTCOffset("America/Guatemala")})` },
+  { value: "Pacific/Guam", label: `Гуам (${getUTCOffset("Pacific/Guam")})` },
+  { value: "Africa/Bissau", label: `Бисау (${getUTCOffset("Africa/Bissau")})` },
+  { value: "America/Guyana", label: `Гайана (${getUTCOffset("America/Guyana")})` },
+  { value: "Asia/Hong_Kong", label: `Гонконг (${getUTCOffset("Asia/Hong_Kong")})` },
+  { value: "America/Tegucigalpa", label: `Тегусигальпа (${getUTCOffset("America/Tegucigalpa")})` },
+  { value: "America/Port-au-Prince", label: `Порт-о-Пренс (${getUTCOffset("America/Port-au-Prince")})` },
+  { value: "Europe/Budapest", label: `Будапешт (${getUTCOffset("Europe/Budapest")})` },
+  { value: "Asia/Jakarta", label: `Джакарта (${getUTCOffset("Asia/Jakarta")})` },
+  { value: "Asia/Pontianak", label: `Понтианак (${getUTCOffset("Asia/Pontianak")})` },
+  { value: "Asia/Makassar", label: `Макассар (${getUTCOffset("Asia/Makassar")})` },
+  { value: "Asia/Jayapura", label: `Джаяпура (${getUTCOffset("Asia/Jayapura")})` },
+  { value: "Europe/Dublin", label: `Дублин (${getUTCOffset("Europe/Dublin")})` },
+  { value: "Asia/Jerusalem", label: `Иерусалим (${getUTCOffset("Asia/Jerusalem")})` },
+  { value: "Asia/Kolkata", label: `Калькутта (${getUTCOffset("Asia/Kolkata")})` },
+  { value: "Indian/Chagos", label: `Чагос (${getUTCOffset("Indian/Chagos")})` },
+  { value: "Asia/Baghdad", label: `Багдад (${getUTCOffset("Asia/Baghdad")})` },
+  { value: "Asia/Tehran", label: `Тегеран (${getUTCOffset("Asia/Tehran")})` },
+  { value: "Atlantic/Reykjavik", label: `Рейкьявик (${getUTCOffset("Atlantic/Reykjavik")})` },
+  { value: "Europe/Rome", label: `Рим (${getUTCOffset("Europe/Rome")})` },
+  { value: "America/Jamaica", label: `Ямайка (${getUTCOffset("America/Jamaica")})` },
+  { value: "Asia/Amman", label: `Амман (${getUTCOffset("Asia/Amman")})` },
+  { value: "Asia/Tokyo", label: `Токио (${getUTCOffset("Asia/Tokyo")})` },
+  { value: "Africa/Nairobi", label: `Найроби (${getUTCOffset("Africa/Nairobi")})` },
+  { value: "Asia/Bishkek", label: `Бишкек (${getUTCOffset("Asia/Bishkek")})` },
+  { value: "Pacific/Tarawa", label: `Тарава (${getUTCOffset("Pacific/Tarawa")})` },
+  { value: "Pacific/Enderbury", label: `Эндербери (${getUTCOffset("Pacific/Enderbury")})` },
+  { value: "Pacific/Kiritimati", label: `Киритимати (${getUTCOffset("Pacific/Kiritimati")})` },
+  { value: "Asia/Pyongyang", label: `Пхеньян (${getUTCOffset("Asia/Pyongyang")})` },
+  { value: "Asia/Seoul", label: `Сеул (${getUTCOffset("Asia/Seoul")})` },
+  { value: "Asia/Almaty", label: `Алматы (${getUTCOffset("Asia/Almaty")})` },
+  { value: "Asia/Qyzylorda", label: `Кызылорда (${getUTCOffset("Asia/Qyzylorda")})` },
+  { value: "Asia/Qostanay", label: `Костанай (${getUTCOffset("Asia/Qostanay")})` },
+  { value: "Asia/Aqtobe", label: `Актобе (${getUTCOffset("Asia/Aqtobe")})` },
+  { value: "Asia/Aqtau", label: `Актау (${getUTCOffset("Asia/Aqtau")})` },
+  { value: "Asia/Atyrau", label: `Атырау (${getUTCOffset("Asia/Atyrau")})` },
+  { value: "Asia/Oral", label: `Орал (${getUTCOffset("Asia/Oral")})` },
     { value: "Asia/Beirut", label: "Бейрут" },
     { value: "Asia/Colombo", label: "Коломбо" },
     { value: "Africa/Monrovia", label: "Монровия" },
-    { value: "America/Santo_Domingo", label: "Санто-Доминго" },
-    { value: "Africa/Algiers", label: "Алжир" },
-    { value: "America/Guayaquil", label: "Гуаякиль" },
-    { value: "Pacific/Galapagos", label: "Галапагос" },
-    { value: "Europe/Tallinn", label: "Таллин" },
-    { value: "Africa/Cairo", label: "Каир" },
-    { value: "Africa/El_Aaiun", label: "Эль-Аайун" },
-    { value: "Europe/Madrid", label: "Мадрид" },
-    { value: "Africa/Ceuta", label: "Сеута" },
-    { value: "Atlantic/Canary", label: "Канарские острова" },
-    { value: "Europe/Helsinki", label: "Хельсинки" },
-    { value: "Pacific/Fiji", label: "Фиджи" },
-    { value: "Atlantic/Stanley", label: "Стэнли" },
-    { value: "Pacific/Chuuk", label: "Чуук" },
-    { value: "Pacific/Pohnpei", label: "Понпеи" },
-    { value: "Pacific/Kosrae", label: "Косраэ" },
-    { value: "Atlantic/Faroe", label: "Фарерские острова" },
-    { value: "Europe/Paris", label: "Париж" },
-    { value: "Europe/London", label: "Лондон" },
-    { value: "Asia/Tbilisi", label: "Тбилиси" },
-    { value: "America/Cayenne", label: "Кайенна" },
-    { value: "Africa/Accra", label: "Аккра" },
-    { value: "Europe/Gibraltar", label: "Гибралтар" },
-    { value: "America/Godthab", label: "Годтхаб" },
-    { value: "America/Danmarkshavn", label: "Данмарксхавн" },
-    { value: "America/Scoresbysund", label: "Скорсбисун" },
-    { value: "America/Thule", label: "Туле" },
-    { value: "Europe/Athens", label: "Афины" },
-    { value: "Atlantic/South_Georgia", label: "Южная Георгия" },
-    { value: "America/Guatemala", label: "Гватемала" },
-    { value: "Pacific/Guam", label: "Гуам" },
-    { value: "Africa/Bissau", label: "Бисау" },
-    { value: "America/Guyana", label: "Гайана" },
-    { value: "Asia/Hong_Kong", label: "Гонконг" },
-    { value: "America/Tegucigalpa", label: "Тегусигальпа" },
-    { value: "America/Port-au-Prince", label: "Порт-о-Пренс" },
-    { value: "Europe/Budapest", label: "Будапешт" },
-    { value: "Asia/Jakarta", label: "Джакарта" },
-    { value: "Asia/Pontianak", label: "Понтианак" },
-    { value: "Asia/Makassar", label: "Макассар" },
-    { value: "Asia/Jayapura", label: "Джаяпура" },
-    { value: "Europe/Dublin", label: "Дублин" },
-    { value: "Asia/Jerusalem", label: "Иерусалим" },
-    { value: "Asia/Kolkata", label: "Калькутта" },
-    { value: "Indian/Chagos", label: "Чагос" },
-    { value: "Asia/Baghdad", label: "Багдад" },
-    { value: "Asia/Tehran", label: "Тегеран" },
-    { value: "Atlantic/Reykjavik", label: "Рейкьявик" },
-    { value: "Europe/Rome", label: "Рим" },
-    { value: "America/Jamaica", label: "Ямайка" },
-    { value: "Asia/Amman", label: "Амман" },
-    { value: "Asia/Tokyo", label: "Токио" },
-    { value: "Africa/Nairobi", label: "Найроби" },
-    { value: "Asia/Bishkek", label: "Бишкек" },
-    { value: "Pacific/Tarawa", label: "Тарава" },
-    { value: "Pacific/Enderbury", label: "Эндербери" },
-    { value: "Pacific/Kiritimati", label: "Киритимати" },
-    { value: "Asia/Pyongyang", label: "Пхеньян" },
-    { value: "Asia/Seoul", label: "Сеул" },
-    { value: "Asia/Almaty", label: "Алматы" },
-    { value: "Asia/Qyzylorda", label: "Кызылорда" },
-    { value: "Asia/Qostanay", label: "Костанай" },
-    { value: "Asia/Aqtobe", label: "Актобе" },
-    { value: "Asia/Aqtau", label: "Актау" },
-    { value: "Asia/Atyrau", label: "Атырау" },
-    { value: "Asia/Oral", label: "Орал" },
-    { value: "Asia/Beirut", label: "Бейрут" },
-    { value: "Asia/Colombo", label: "Коломбо" },
-    { value: "Africa/Monrovia", label: "Монровия" },
-    { value: "Europe/Vilnius", label: "Вильнюс" },
-    { value: "Europe/Luxembourg", label: "Люксембург" },
-    { value: "Europe/Riga", label: "Рига" },
-    { value: "Africa/Tripoli", label: "Триполи" },
-    { value: "Africa/Casablanca", label: "Касабланка" },
-    { value: "Europe/Monaco", label: "Монако" },
-    { value: "Europe/Chisinau", label: "Кишинев" },
-    { value: "Pacific/Majuro", label: "Маджуро" },
-    { value: "Pacific/Kwajalein", label: "Кваджалейн" },
-    { value: "Asia/Yangon", label: "Янгон" },
-    { value: "Asia/Ulaanbaatar", label: "Улан-Батор" },
-    { value: "Asia/Hovd", label: "Ховд" },
-    { value: "Asia/Choibalsan", label: "Чойбалсан" },
-    { value: "Asia/Macau", label: "Макао" },
-    { value: "America/Martinique", label: "Мартиника" },
-    { value: "Europe/Malta", label: "Мальта" },
-    { value: "Indian/Mauritius", label: "Маврикий" },
-    { value: "Indian/Maldives", label: "Мальдивы" },
-    { value: "America/Mexico_City", label: "Мехико" },
-    { value: "America/Cancun", label: "Канкун" },
-    { value: "America/Merida", label: "Мерида" },
-    { value: "America/Monterrey", label: "Монтеррей" },
-    { value: "America/Matamoros", label: "Матаморос" },
-    { value: "America/Mazatlan", label: "Мазатлан" },
-    { value: "America/Chihuahua", label: "Чиуауа" },
-    { value: "America/Ojinaga", label: "Охинага" },
-    { value: "America/Hermosillo", label: "Эрмосильо" },
-    { value: "America/Tijuana", label: "Тихуана" },
-    { value: "America/Bahia_Banderas", label: "Бахия-Бандерас" },
-    { value: "Asia/Kuala_Lumpur", label: "Куала-Лумпур" },
-    { value: "Asia/Kuching", label: "Кучинг" },
-    { value: "Africa/Maputo", label: "Мапут" },
-    { value: "Africa/Windhoek", label: "Виндхук" },
-    { value: "Pacific/Noumea", label: "Нумеа" },
-    { value: "Pacific/Norfolk", label: "Норфолк" },
-    { value: "Africa/Lagos", label: "Лагос" },
-    { value: "America/Managua", label: "Манагуа" },
-    { value: "Europe/Amsterdam", label: "Амстердам" },
-    { value: "Europe/Oslo", label: "Осло" },
-    { value: "Asia/Kathmandu", label: "Катманду" },
-    { value: "Pacific/Nauru", label: "Науру" },
-    { value: "Pacific/Niue", label: "Ниуэ" },
-    { value: "Pacific/Auckland", label: "Окленд" },
-    { value: "Pacific/Chatham", label: "Чатем" },
-    { value: "America/Panama", label: "Панама" },
-    { value: "America/Lima", label: "Лима" },
-    { value: "Pacific/Tahiti", label: "Таити" },
-    { value: "Pacific/Marquesas", label: "Маркизские острова" },
-    { value: "Pacific/Gambier", label: "Гамбиер" },
-    { value: "Pacific/Port_Moresby", label: "Порт-Морсби" },
-    { value: "Pacific/Bougainville", label: "Бука" },
-    { value: "Asia/Manila", label: "Манила" },
-    { value: "Asia/Karachi", label: "Карачи" },
-    { value: "Europe/Warsaw", label: "Варшава" },
-    { value: "America/Miquelon", label: "Микелон" },
-    { value: "Pacific/Pitcairn", label: "Питкерн" },
-    { value: "America/Puerto_Rico", label: "Пуэрто-Рико" },
-    { value: "Asia/Gaza", label: "Газа" },
-    { value: "Asia/Hebron", label: "Хеврон" },
-    { value: "Europe/Lisbon", label: "Лиссабон" },
-    { value: "Atlantic/Madeira", label: "Мадейра" },
-    { value: "Atlantic/Azores", label: "Азорские острова" },
-    { value: "Pacific/Palau", label: "Палау" },
-    { value: "America/Asuncion", label: "Асунсьон" },
-    { value: "Asia/Qatar", label: "Катар" },
-    { value: "Indian/Reunion", label: "Реюньон" },
-    { value: "Europe/Bucharest", label: "Бухарест" },
-    { value: "Europe/Belgrade", label: "Белград" },
-    { value: "Europe/Kaliningrad", label: "Калининград" },
-    { value: "Europe/Moscow", label: "Москва" },
-    { value: "Europe/Simferopol", label: "Симферополь" },
-    { value: "Europe/Kirov", label: "Киров" },
-    { value: "Europe/Astrakhan", label: "Астрахань" },
-    { value: "Europe/Volgograd", label: "Волгоград" },
-    { value: "Europe/Saratov", label: "Саратов" },
-    { value: "Europe/Ulyanovsk", label: "Ульяновск" },
-    { value: "Europe/Samara", label: "Самара" },
-    { value: "Asia/Yekaterinburg", label: "Екатеринбург" },
-    { value: "Asia/Omsk", label: "Омск" },
-    { value: "Asia/Novosibirsk", label: "Новосибирск" },
-    { value: "Asia/Barnaul", label: "Барнаул" },
-    { value: "Asia/Tomsk", label: "Томск" },
-    { value: "Asia/Novokuznetsk", label: "Новокузнецк" },
-    { value: "Asia/Krasnoyarsk", label: "Красноярск" },
-    { value: "Asia/Irkutsk", label: "Иркутск" },
-    { value: "Asia/Chita", label: "Чита" },
-    { value: "Asia/Yakutsk", label: "Якутск" },
-    { value: "Asia/Khandyga", label: "Хандыга" },
-    { value: "Asia/Vladivostok", label: "Владивосток" },
-    { value: "Asia/Ust-Nera", label: "Усть-Нера" },
-    { value: "Asia/Magadan", label: "Магадан" },
-    { value: "Asia/Sakhalin", label: "Сахалин" },
-    { value: "Asia/Srednekolymsk", label: "Среднеколымск" },
-    { value: "Asia/Kamchatka", label: "Камчатка" },
-    { value: "Asia/Anadyr", label: "Анадырь" },
-    { value: "Asia/Riyadh", label: "Эр-Рияд" },
-    { value: "Pacific/Guadalcanal", label: "Гуадалканал" },
-    { value: "Indian/Mahe", label: "Махе" },
-    { value: "Africa/Khartoum", label: "Хартум" },
-    { value: "Europe/Stockholm", label: "Стокгольм" },
-    { value: "Asia/Singapore", label: "Сингапур" },
-    { value: "America/Paramaribo", label: "Парамарибо" },
-    { value: "Africa/Juba", label: "Джуба" },
-    { value: "Africa/Sao_Tome", label: "Сан-Томе" },
-    { value: "America/El_Salvador", label: "Эль-Сальвадор" },
-    { value: "Asia/Damascus", label: "Дамаск" },
-    { value: "America/Grand_Turk", label: "Гранд-Терк" },
-    { value: "Africa/Ndjamena", label: "Нджамена" },
-    { value: "Indian/Kerguelen", label: "Кергелен" },
-    { value: "Asia/Bangkok", label: "Бангкок" },
-    { value: "Asia/Dushanbe", label: "Душанбе" },
-    { value: "Pacific/Fakaofo", label: "Факаофо" },
-    { value: "Asia/Dili", label: "Дили" },
-    { value: "Asia/Ashgabat", label: "Ашхабад" },
-    { value: "Africa/Tunis", label: "Тунис" },
-    { value: "Pacific/Tongatapu", label: "Тонгатапу" },
-    { value: "Europe/Istanbul", label: "Стамбул" },
-    { value: "America/Port_of_Spain", label: "Порт-оф-Спейн" },
-    { value: "Pacific/Funafuti", label: "Фунафути" },
-    { value: "Asia/Taipei", label: "Тайбэй" },
-    { value: "Europe/Kiev", label: "Киев" },
-    { value: "Europe/Uzhgorod", label: "Ужгород" },
-    { value: "Europe/Zaporozhye", label: "Запорожье" },
-    { value: "Pacific/Wake", label: "Уэйк" },
-    { value: "America/New_York", label: "Нью-Йорк" },
-    { value: "America/Detroit", label: "Детройт" },
-    { value: "America/Kentucky/Louisville", label: "Луисвилл" },
-    { value: "America/Kentucky/Monticello", label: "Монтсельо" },
-    { value: "America/Indiana/Indianapolis", label: "Индианаполис" },
-    { value: "America/Indiana/Vincennes", label: "Винсеннес" },
-    { value: "America/Indiana/Winamac", label: "Винамак" },
-    { value: "America/Indiana/Marengo", label: "Маренго" },
-    { value: "America/Indiana/Petersburg", label: "Петерсбург" },
-    { value: "America/Indiana/Vevay", label: "Вевей" },
-    { value: "America/Chicago", label: "Чикаго" },
-    { value: "America/Indiana/Tell_City", label: "Телл-Сити" },
-    { value: "America/Indiana/Knox", label: "Кнокса" },
-    { value: "America/Menominee", label: "Меномини" },
-    { value: "America/North_Dakota/Center", label: "Центр" },
-    { value: "America/North_Dakota/New_Salem", label: "Нью-Салем" },
-    { value: "America/North_Dakota/Beulah", label: "Бьюла" },
-    { value: "America/Denver", label: "Денвер" },
-    { value: "America/Boise", label: "Бойсе" },
-    { value: "America/Phoenix", label: "Финикс" },
-    { value: "America/Los_Angeles", label: "Лос-Анджелес" },
-    { value: "America/Anchorage", label: "Анкоридж" },
-    { value: "America/Juneau", label: "Джунейо" },
-    { value: "America/Sitka", label: "Ситка" },
-    { value: "America/Metlakatla", label: "Метлакатла" },
-    { value: "America/Yakutat", label: "Якутат" },
-    { value: "America/Nome", label: "Ном" },
-    { value: "America/Adak", label: "Адак" },
-    { value: "Pacific/Honolulu", label: "Гонолулу" },
-    { value: "America/Montevideo", label: "Монтевидео" },
-    { value: "Asia/Samarkand", label: "Самарканд" },
-    { value: "Asia/Tashkent", label: "Ташкент" },
-    { value: "America/Caracas", label: "Каракас" },
-    { value: "Asia/Ho_Chi_Minh", label: "Хошимин" },
-    { value: "Pacific/Efate", label: "Эфате" },
-    { value: "Pacific/Wallis", label: "Уоллис" },
-    { value: "Pacific/Apia", label: "Апиa" },
-    { value: "Africa/Johannesburg", label: "Йоханнесбург" },
+  { value: "Europe/Vilnius", label: `Вильнюс (${getUTCOffset("Europe/Vilnius")})` },
+  { value: "Europe/Luxembourg", label: `Люксембург (${getUTCOffset("Europe/Luxembourg")})` },
+  { value: "Europe/Riga", label: `Рига (${getUTCOffset("Europe/Riga")})` },
+  { value: "Africa/Tripoli", label: `Триполи (${getUTCOffset("Africa/Tripoli")})` },
+  { value: "Africa/Casablanca", label: `Касабланка (${getUTCOffset("Africa/Casablanca")})` },
+  { value: "Europe/Monaco", label: `Монако (${getUTCOffset("Europe/Monaco")})` },
+  { value: "Europe/Chisinau", label: `Кишинев (${getUTCOffset("Europe/Chisinau")})` },
+  { value: "Pacific/Majuro", label: `Маджуро (${getUTCOffset("Pacific/Majuro")})` },
+  { value: "Pacific/Kwajalein", label: `Кваджалейн (${getUTCOffset("Pacific/Kwajalein")})` },
+  { value: "Asia/Yangon", label: `Янгон (${getUTCOffset("Asia/Yangon")})` },
+  { value: "Asia/Ulaanbaatar", label: `Улан-Батор (${getUTCOffset("Asia/Ulaanbaatar")})` },
+  { value: "Asia/Hovd", label: `Ховд (${getUTCOffset("Asia/Hovd")})` },
+  { value: "Asia/Choibalsan", label: `Чойбалсан (${getUTCOffset("Asia/Choibalsan")})` },
+  { value: "Asia/Macau", label: `Макао (${getUTCOffset("Asia/Macau")})` },
+  { value: "America/Martinique", label: `Мартиника (${getUTCOffset("America/Martinique")})` },
+  { value: "Europe/Malta", label: `Мальта (${getUTCOffset("Europe/Malta")})` },
+  { value: "Indian/Mauritius", label: `Маврикий (${getUTCOffset("Indian/Mauritius")})` },
+  { value: "Indian/Maldives", label: `Мальдивы (${getUTCOffset("Indian/Maldives")})` },
+  { value: "America/Mexico_City", label: `Мехико (${getUTCOffset("America/Mexico_City")})` },
+  { value: "America/Cancun", label: `Канкун (${getUTCOffset("America/Cancun")})` },
+  { value: "America/Merida", label: `Мерида (${getUTCOffset("America/Merida")})` },
+  { value: "America/Monterrey", label: `Монтеррей (${getUTCOffset("America/Monterrey")})` },
+  { value: "America/Matamoros", label: `Матаморос (${getUTCOffset("America/Matamoros")})` },
+  { value: "America/Mazatlan", label: `Мазатлан (${getUTCOffset("America/Mazatlan")})` },
+  { value: "America/Chihuahua", label: `Чиуауа (${getUTCOffset("America/Chihuahua")})` },
+  { value: "America/Ojinaga", label: `Охинага (${getUTCOffset("America/Ojinaga")})` },
+  { value: "America/Hermosillo", label: `Эрмосильо (${getUTCOffset("America/Hermosillo")})` },
+  { value: "America/Tijuana", label: `Тихуана (${getUTCOffset("America/Tijuana")})` },
+  { value: "America/Bahia_Banderas", label: `Бахия-Бандерас (${getUTCOffset("America/Bahia_Banderas")})` },
+  { value: "Asia/Kuala_Lumpur", label: `Куала-Лумпур (${getUTCOffset("Asia/Kuala_Lumpur")})` },
+  { value: "Asia/Kuching", label: `Кучинг (${getUTCOffset("Asia/Kuching")})` },
+  { value: "Africa/Maputo", label: `Мапут (${getUTCOffset("Africa/Maputo")})` },
+  { value: "Africa/Windhoek", label: `Виндхук (${getUTCOffset("Africa/Windhoek")})` },
+  { value: "Pacific/Noumea", label: `Нумеа (${getUTCOffset("Pacific/Noumea")})` },
+  { value: "Pacific/Norfolk", label: `Норфолк (${getUTCOffset("Pacific/Norfolk")})` },
+  { value: "Africa/Lagos", label: `Лагос (${getUTCOffset("Africa/Lagos")})` },
+  { value: "America/Managua", label: `Манагуа (${getUTCOffset("America/Managua")})` },
+  { value: "Europe/Amsterdam", label: `Амстердам (${getUTCOffset("Europe/Amsterdam")})` },
+  { value: "Europe/Oslo", label: `Осло (${getUTCOffset("Europe/Oslo")})` },
+  { value: "Asia/Kathmandu", label: `Катманду (${getUTCOffset("Asia/Kathmandu")})` },
+  { value: "Pacific/Nauru", label: `Науру (${getUTCOffset("Pacific/Nauru")})` },
+  { value: "Pacific/Niue", label: `Ниуэ (${getUTCOffset("Pacific/Niue")})` },
+  { value: "Pacific/Auckland", label: `Окленд (${getUTCOffset("Pacific/Auckland")})` },
+  { value: "Pacific/Chatham", label: `Чатем (${getUTCOffset("Pacific/Chatham")})` },
+  { value: "America/Panama", label: `Панама (${getUTCOffset("America/Panama")})` },
+  { value: "America/Lima", label: `Лима (${getUTCOffset("America/Lima")})` },
+  { value: "Pacific/Tahiti", label: `Таити (${getUTCOffset("Pacific/Tahiti")})` },
+  { value: "Pacific/Marquesas", label: `Маркизские острова (${getUTCOffset("Pacific/Marquesas")})` },
+  { value: "Pacific/Gambier", label: `Гамбиер (${getUTCOffset("Pacific/Gambier")})` },
+  { value: "Pacific/Port_Moresby", label: `Порт-Морсби (${getUTCOffset("Pacific/Port_Moresby")})` },
+  { value: "Pacific/Bougainville", label: `Бука (${getUTCOffset("Pacific/Bougainville")})` },
+  { value: "Asia/Manila", label: `Манила (${getUTCOffset("Asia/Manila")})` },
+  { value: "Asia/Karachi", label: `Карачи (${getUTCOffset("Asia/Karachi")})` },
+  { value: "Europe/Warsaw", label: `Варшава (${getUTCOffset("Europe/Warsaw")})` },
+  { value: "America/Miquelon", label: `Микелон (${getUTCOffset("America/Miquelon")})` },
+  { value: "Pacific/Pitcairn", label: `Питкерн (${getUTCOffset("Pacific/Pitcairn")})` },
+  { value: "America/Puerto_Rico", label: `Пуэрто-Рико (${getUTCOffset("America/Puerto_Rico")})` },
+  { value: "Asia/Gaza", label: `Газа (${getUTCOffset("Asia/Gaza")})` },
+  { value: "Asia/Hebron", label: `Хеврон (${getUTCOffset("Asia/Hebron")})` },
+  { value: "Europe/Lisbon", label: `Лиссабон (${getUTCOffset("Europe/Lisbon")})` },
+  { value: "Atlantic/Madeira", label: `Мадейра (${getUTCOffset("Atlantic/Madeira")})` },
+  { value: "Atlantic/Azores", label: `Азорские острова (${getUTCOffset("Atlantic/Azores")})` },
+  { value: "Pacific/Palau", label: `Палау (${getUTCOffset("Pacific/Palau")})` },
+  { value: "America/Asuncion", label: `Асунсьон (${getUTCOffset("America/Asuncion")})` },
+  { value: "Asia/Qatar", label: `Катар (${getUTCOffset("Asia/Qatar")})` },
+  { value: "Indian/Reunion", label: `Реюньон (${getUTCOffset("Indian/Reunion")})` },
+  { value: "Europe/Bucharest", label: `Бухарест (${getUTCOffset("Europe/Bucharest")})` },
+  { value: "Europe/Belgrade", label: `Белград (${getUTCOffset("Europe/Belgrade")})` },
+  { value: "Europe/Kaliningrad", label: `Калининград (${getUTCOffset("Europe/Kaliningrad")})` },
+  { value: "Europe/Moscow", label: `Москва (${getUTCOffset("Europe/Moscow")})` },
+  { value: "Europe/Simferopol", label: `Симферополь (${getUTCOffset("Europe/Simferopol")})` },
+  { value: "Europe/Kirov", label: `Киров (${getUTCOffset("Europe/Kirov")})` },
+  { value: "Europe/Astrakhan", label: `Астрахань (${getUTCOffset("Europe/Astrakhan")})` },
+  { value: "Europe/Volgograd", label: `Волгоград (${getUTCOffset("Europe/Volgograd")})` },
+  { value: "Europe/Saratov", label: `Саратов (${getUTCOffset("Europe/Saratov")})` },
+  { value: "Europe/Ulyanovsk", label: `Ульяновск (${getUTCOffset("Europe/Ulyanovsk")})` },
+  { value: "Europe/Samara", label: `Самара (${getUTCOffset("Europe/Samara")})` },
+  { value: "Asia/Yekaterinburg", label: `Екатеринбург (${getUTCOffset("Asia/Yekaterinburg")})` },
+  { value: "Asia/Omsk", label: `Омск (${getUTCOffset("Asia/Omsk")})` },
+  { value: "Asia/Novosibirsk", label: `Новосибирск (${getUTCOffset("Asia/Novosibirsk")})` },
+  { value: "Asia/Barnaul", label: `Барнаул (${getUTCOffset("Asia/Barnaul")})` },
+  { value: "Asia/Tomsk", label: `Томск (${getUTCOffset("Asia/Tomsk")})` },
+  { value: "Asia/Novokuznetsk", label: `Новокузнецк (${getUTCOffset("Asia/Novokuznetsk")})` },
+  { value: "Asia/Krasnoyarsk", label: `Красноярск (${getUTCOffset("Asia/Krasnoyarsk")})` },
+  { value: "Asia/Irkutsk", label: `Иркутск (${getUTCOffset("Asia/Irkutsk")})` },
+  { value: "Asia/Chita", label: `Чита (${getUTCOffset("Asia/Chita")})` },
+  { value: "Asia/Yakutsk", label: `Якутск (${getUTCOffset("Asia/Yakutsk")})` },
+  { value: "Asia/Khandyga", label: `Хандыга (${getUTCOffset("Asia/Khandyga")})` },
+  { value: "Asia/Vladivostok", label: `Владивосток (${getUTCOffset("Asia/Vladivostok")})` },
+  { value: "Asia/Ust-Nera", label: `Усть-Нера (${getUTCOffset("Asia/Ust-Nera")})` },
+  { value: "Asia/Magadan", label: `Магадан (${getUTCOffset("Asia/Magadan")})` },
+  { value: "Asia/Sakhalin", label: `Сахалин (${getUTCOffset("Asia/Sakhalin")})` },
+  { value: "Asia/Srednekolymsk", label: `Среднеколымск (${getUTCOffset("Asia/Srednekolymsk")})` },
+  { value: "Asia/Kamchatka", label: `Камчатка (${getUTCOffset("Asia/Kamchatka")})` },
+  { value: "Asia/Anadyr", label: `Анадырь (${getUTCOffset("Asia/Anadyr")})` },
+  { value: "Asia/Riyadh", label: `Эр-Рияд (${getUTCOffset("Asia/Riyadh")})` },
+  { value: "Pacific/Guadalcanal", label: `Гуадалканал (${getUTCOffset("Pacific/Guadalcanal")})` },
+  { value: "Indian/Mahe", label: `Махе (${getUTCOffset("Indian/Mahe")})` },
+  { value: "Africa/Khartoum", label: `Хартум (${getUTCOffset("Africa/Khartoum")})` },
+  { value: "Europe/Stockholm", label: `Стокгольм (${getUTCOffset("Europe/Stockholm")})` },
+  { value: "Asia/Singapore", label: `Сингапур (${getUTCOffset("Asia/Singapore")})` },
+  { value: "America/Paramaribo", label: `Парамарибо (${getUTCOffset("America/Paramaribo")})` },
+  { value: "Africa/Juba", label: `Джуба (${getUTCOffset("Africa/Juba")})` },
+  { value: "Africa/Sao_Tome", label: `Сан-Томе (${getUTCOffset("Africa/Sao_Tome")})` },
+  { value: "America/El_Salvador", label: `Эль-Сальвадор (${getUTCOffset("America/El_Salvador")})` },
+  { value: "Asia/Damascus", label: `Дамаск (${getUTCOffset("Asia/Damascus")})` },
+  { value: "America/Grand_Turk", label: `Гранд-Терк (${getUTCOffset("America/Grand_Turk")})` },
+  { value: "Africa/Ndjamena", label: `Нджамена (${getUTCOffset("Africa/Ndjamena")})` },
+  { value: "Indian/Kerguelen", label: `Кергелен (${getUTCOffset("Indian/Kerguelen")})` },
+  { value: "Asia/Bangkok", label: `Бангкок (${getUTCOffset("Asia/Bangkok")})` },
+  { value: "Asia/Dushanbe", label: `Душанбе (${getUTCOffset("Asia/Dushanbe")})` },
+  { value: "Pacific/Fakaofo", label: `Факаофо (${getUTCOffset("Pacific/Fakaofo")})` },
+  { value: "Asia/Dili", label: `Дили (${getUTCOffset("Asia/Dili")})` },
+  { value: "Asia/Ashgabat", label: `Ашхабад (${getUTCOffset("Asia/Ashgabat")})` },
+  { value: "Africa/Tunis", label: `Тунис (${getUTCOffset("Africa/Tunis")})` },
+  { value: "Pacific/Tongatapu", label: `Тонгатапу (${getUTCOffset("Pacific/Tongatapu")})` },
+  { value: "Europe/Istanbul", label: `Стамбул (${getUTCOffset("Europe/Istanbul")})` },
+  { value: "America/Port_of_Spain", label: `Порт-оф-Спейн (${getUTCOffset("America/Port_of_Spain")})` },
+  { value: "Pacific/Funafuti", label: `Фунафути (${getUTCOffset("Pacific/Funafuti")})` },
+  { value: "Asia/Taipei", label: `Тайбэй (${getUTCOffset("Asia/Taipei")})` },
+  { value: "Europe/Kiev", label: `Киев (${getUTCOffset("Europe/Kiev")})` },
+  { value: "Europe/Uzhgorod", label: `Ужгород (${getUTCOffset("Europe/Uzhgorod")})` },
+  { value: "Europe/Zaporozhye", label: `Запорожье (${getUTCOffset("Europe/Zaporozhye")})` },
+  { value: "Pacific/Wake", label: `Уэйк (${getUTCOffset("Pacific/Wake")})` },
+  { value: "America/New_York", label: `Нью-Йорк (${getUTCOffset("America/New_York")})` },
+  { value: "America/Detroit", label: `Детройт (${getUTCOffset("America/Detroit")})` },
+  { value: "America/Kentucky/Louisville", label: `Луисвилл (${getUTCOffset("America/Kentucky/Louisville")})` },
+  { value: "America/Kentucky/Monticello", label: `Монтсельо (${getUTCOffset("America/Kentucky/Monticello")})` },
+  { value: "America/Indiana/Indianapolis", label: `Индианаполис (${getUTCOffset("America/Indiana/Indianapolis")})` },
+  { value: "America/Indiana/Vincennes", label: `Винсеннес (${getUTCOffset("America/Indiana/Vincennes")})` },
+  { value: "America/Indiana/Winamac", label: `Винамак (${getUTCOffset("America/Indiana/Winamac")})` },
+  { value: "America/Indiana/Marengo", label: `Маренго (${getUTCOffset("America/Indiana/Marengo")})` },
+  { value: "America/Indiana/Petersburg", label: `Петерсбург (${getUTCOffset("America/Indiana/Petersburg")})` },
+  { value: "America/Indiana/Vevay", label: `Вевей (${getUTCOffset("America/Indiana/Vevay")})` },
+  { value: "America/Chicago", label: `Чикаго (${getUTCOffset("America/Chicago")})` },
+  { value: "America/Indiana/Tell_City", label: `Телл-Сити (${getUTCOffset("America/Indiana/Tell_City")})` },
+  { value: "America/Indiana/Knox", label: `Кнокса (${getUTCOffset("America/Indiana/Knox")})` },
+  { value: "America/Menominee", label: `Меномини (${getUTCOffset("America/Menominee")})` },
+  { value: "America/North_Dakota/Center", label: `Центр (${getUTCOffset("America/North_Dakota/Center")})` },
+  { value: "America/North_Dakota/New_Salem", label: `Нью-Салем (${getUTCOffset("America/North_Dakota/New_Salem")})` },
+  { value: "America/North_Dakota/Beulah", label: `Бьюла (${getUTCOffset("America/North_Dakota/Beulah")})` },
+  { value: "America/Denver", label: `Денвер (${getUTCOffset("America/Denver")})` },
+  { value: "America/Boise", label: `Бойсе (${getUTCOffset("America/Boise")})` },
+  { value: "America/Phoenix", label: `Финикс (${getUTCOffset("America/Phoenix")})` },
+  { value: "America/Los_Angeles", label: `Лос-Анджелес (${getUTCOffset("America/Los_Angeles")})` },
+  { value: "America/Anchorage", label: `Анкоридж (${getUTCOffset("America/Anchorage")})` },
+  { value: "America/Juneau", label: `Джунейо (${getUTCOffset("America/Juneau")})` },
+  { value: "America/Sitka", label: `Ситка (${getUTCOffset("America/Sitka")})` },
+  { value: "America/Metlakatla", label: `Метлакатла (${getUTCOffset("America/Metlakatla")})` },
+  { value: "America/Yakutat", label: `Якутат (${getUTCOffset("America/Yakutat")})` },
+  { value: "America/Nome", label: `Ном (${getUTCOffset("America/Nome")})` },
+  { value: "America/Adak", label: `Адак (${getUTCOffset("America/Adak")})` },
+  { value: "Pacific/Honolulu", label: `Гонолулу (${getUTCOffset("Pacific/Honolulu")})` },
+  { value: "America/Montevideo", label: `Монтевидео (${getUTCOffset("America/Montevideo")})` },
+  { value: "Asia/Samarkand", label: `Самарканд (${getUTCOffset("Asia/Samarkand")})` },
+  { value: "Asia/Tashkent", label: `Ташкент (${getUTCOffset("Asia/Tashkent")})` },
+  { value: "America/Caracas", label: `Каракас (${getUTCOffset("America/Caracas")})` },
+  { value: "Asia/Ho_Chi_Minh", label: `Хошимин (${getUTCOffset("Asia/Ho_Chi_Minh")})` },
+  { value: "Pacific/Efate", label: `Эфате (${getUTCOffset("Pacific/Efate")})` },
+  { value: "Pacific/Wallis", label: `Уоллис (${getUTCOffset("Pacific/Wallis")})` },
+  { value: "Pacific/Apia", label: `Апиa (${getUTCOffset("Pacific/Apia")})` },
+  { value: "Africa/Johannesburg", label: `Йоханнесбург (${getUTCOffset("Africa/Johannesburg")})` },
   ];
 
 
@@ -992,6 +1037,18 @@
         return "Произведено";
     }
   }
+
+  // Функция для определения пройден ли этап (для зеленого выделения)
+  function isStepCompleted(batch: any, step: string) {
+    const currentStatus = getBatchStatus(batch);
+    const statusOrder = ["Производится", "Произведено", "На холде", "Отправляется", "Отправлена"];
+    
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    const stepIndex = statusOrder.indexOf(step);
+    
+    // Этап считается пройденным, если он находится до текущего статуса или является текущим
+    return stepIndex <= currentIndex;
+  }
 </script>
 
 {#if $tokenPayload}
@@ -1028,14 +1085,24 @@
                 <label class="mobile-filter-label">Партия</label>
                 <input
                   type="text"
-                  placeholder="Поиск по партии..."
+                  placeholder=""
                   bind:value={filters.party}
                   class="mobile-filter-input"
                 />
               </div>
               
               <div class="mobile-filter-section">
-                <label class="mobile-filter-label">Дата производства</label>
+                <label class="mobile-filter-label">Продукт</label>
+                <input
+                  type="text"
+                  placeholder=""
+                  bind:value={filters.product}
+                  class="mobile-filter-input"
+                />
+              </div>
+              
+              <div class="mobile-filter-section">
+                <label class="mobile-filter-label">Диапазон дат</label>
                 <div class="mobile-date-picker">
                   <div class="mobile-date-inputs">
                     <div class="mobile-date-input-group">
@@ -1083,7 +1150,7 @@
                 <label class="mobile-filter-label">Статус</label>
                 <input
                   type="text"
-                  placeholder="Поиск по статусу..."
+                  placeholder=""
                   bind:value={filters.status}
                   class="mobile-filter-input"
                 />
@@ -1226,13 +1293,13 @@
                         }
                       }}
                     >
-                      <span>Партия</span>
+                      <span>Партия 🔍</span>
                     </div>
                     {#if activeSearch === "party"}
                       <div class="th-search-dropdown">
                         <input
                           type="text"
-                          placeholder="Поиск по партии..."
+                          placeholder=""
                           bind:value={filters.party}
                           class="th-search-input"
                         />
@@ -1264,13 +1331,13 @@
                       }
                     }}
                   >
-                    <span>Продукт</span>
+                    <span>Продукт 🔍</span>
                   </div>
                   {#if activeSearch === "product"}
                     <div class="th-search-dropdown">
                       <input
                         type="text"
-                        placeholder="Поиск по продукту..."
+                        placeholder=""
                         bind:value={filters.product}
                         class="th-search-input"
                       />
@@ -1399,13 +1466,13 @@
                       }
                     }}
                   >
-                    <span>Статус</span>
+                    <span>Статус 🔍</span>
                   </div>
                   {#if activeSearch === "status"}
                     <div class="th-search-dropdown">
                       <input
                         type="text"
-                        placeholder="Поиск по статусу..."
+                        placeholder=""
                         bind:value={filters.status}
                         class="th-search-input"
                       />
@@ -1519,8 +1586,7 @@
                       <div class="process-flow-mini">
                         <div
                           class="flow-item-mini"
-                          class:completed={getBatchStatus(batch) ===
-                            "Производится"}
+                          class:completed={isStepCompleted(batch, "Производится")}
                           class:active={getBatchStatus(batch) ===
                             "Производится"}
                         >
@@ -1530,8 +1596,7 @@
                         <div class="flow-arrow-mini">→</div>
                         <div
                           class="flow-item-mini"
-                          class:completed={getBatchStatus(batch) ===
-                            "Произведено"}
+                          class:completed={isStepCompleted(batch, "Произведено")}
                           class:active={getBatchStatus(batch) === "Произведено"}
                         >
                           <div class="flow-circle-mini">2</div>
@@ -1540,10 +1605,7 @@
                         <div class="flow-arrow-mini">→</div>
                         <div
                           class="flow-item-mini"
-                          class:completed={[
-                            "Отправляется",
-                            "Отправлена",
-                          ].includes(getBatchStatus(batch))}
+                          class:completed={isStepCompleted(batch, "На холде")}
                           class:active={getBatchStatus(batch) === "На холде"}
                           class:hold={getBatchStatus(batch) === "На холде"}
                         >
@@ -1553,8 +1615,7 @@
                         <div class="flow-arrow-mini">→</div>
                         <div
                           class="flow-item-mini"
-                          class:completed={getBatchStatus(batch) ===
-                            "Отправлена"}
+                          class:completed={isStepCompleted(batch, "Отправляется")}
                           class:active={getBatchStatus(batch) ===
                             "Отправляется"}
                         >
@@ -1564,8 +1625,7 @@
                         <div class="flow-arrow-mini">→</div>
                         <div
                           class="flow-item-mini"
-                          class:completed={getBatchStatus(batch) ===
-                            "Отправлена"}
+                          class:completed={isStepCompleted(batch, "Отправлена")}
                           class:active={getBatchStatus(batch) === "Отправлена"}
                         >
                           <div class="flow-circle-mini">5</div>
@@ -2134,6 +2194,11 @@
     color: white;
   }
 
+  .flow-item-mini.completed {
+    color: #059669;
+    font-weight: 600;
+  }
+
   .flow-item-mini.active .flow-circle-mini {
     background: #6366f1;
     color: white;
@@ -2290,6 +2355,190 @@
 
   .btn-confirm:hover {
     background: #5046e4;
+  }
+
+  /* iPad Pro с большими экранами (12.9") */
+  @media (min-width: 1024px) and (max-width: 1400px) {
+    .reports-container {
+      padding: 3rem;
+      max-width: 100%;
+    }
+
+    .main-content {
+      border-radius: 28px;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+    }
+
+    .page-header {
+      padding: 3rem 4rem;
+    }
+
+    .header-content h1 {
+      font-size: 3rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #1e293b 0%, #3b82f6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .timezone-selector {
+      padding: 1.5rem 2.5rem;
+      border-radius: 24px;
+      min-width: 400px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .timezone-selector label {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+
+    .timezone-selector select {
+      font-size: 1.2rem;
+      padding: 1.25rem 1.5rem;
+      min-height: 60px;
+      min-width: 250px;
+      max-width: 320px;
+      border-radius: 16px;
+      border: 3px solid #e2e8f0;
+    }
+
+    .table-container {
+      margin: 2rem 4rem 3rem 4rem;
+      border-radius: 28px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+    }
+
+    .reports-table {
+      font-size: 1.2rem;
+    }
+
+    .reports-table th {
+      padding: 2rem 1.5rem;
+      font-size: 1.2rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    }
+
+    .reports-table td {
+      padding: 2rem 1.5rem;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      font-weight: 500;
+    }
+
+    .deadline-cell {
+      min-width: 220px;
+      max-width: 260px;
+    }
+
+    .time-remaining {
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .deadline-date {
+      font-size: 1rem;
+    }
+
+    .status-badge {
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 28px;
+      font-weight: 700;
+      min-width: 140px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .send-btn {
+      font-size: 1rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 20px;
+      font-weight: 700;
+      box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+    }
+
+    .th-search-input {
+      font-size: 1.1rem;
+      padding: 1rem 1.25rem 1rem 3.5rem;
+      min-height: 56px;
+      border-radius: 16px;
+      background-size: 2rem;
+      border: 3px solid #e2e8f0;
+    }
+
+    .date-field {
+      font-size: 1.1rem;
+      padding: 1rem 1.25rem;
+      min-height: 56px;
+      border-radius: 16px;
+      border: 3px solid #e2e8f0;
+    }
+
+    .sort-button {
+      padding: 1rem;
+      font-size: 1.1rem;
+      min-height: 56px;
+      min-width: 56px;
+      border-radius: 16px;
+    }
+
+    .pagination {
+      padding: 2.5rem 4rem;
+      gap: 1.5rem;
+    }
+
+    .pagination button,
+    .pagination span {
+      padding: 1.25rem 1.5rem;
+      font-size: 1.2rem;
+      min-width: 60px;
+      height: 60px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+
+    .batch-info-card {
+      padding: 2.5rem;
+      margin: 2rem 4rem;
+      border-radius: 24px;
+      border-left: 8px solid #3b82f6;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
+
+    .batch-info-header {
+      font-size: 1.4rem;
+      margin-bottom: 2rem;
+      font-weight: 700;
+    }
+
+    .process-flow-mini {
+      gap: 2rem;
+    }
+
+    .flow-item-mini {
+      font-size: 1rem;
+      gap: 1rem;
+      min-width: 120px;
+      font-weight: 600;
+    }
+
+    .flow-circle-mini {
+      width: 48px;
+      height: 48px;
+      font-size: 1.3rem;
+      font-weight: 900;
+      border: 3px solid transparent;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .flow-arrow-mini {
+      font-size: 1.8rem;
+      font-weight: 800;
+    }
   }
 
   /* Стили для больших экранов и масштаба 100% */
@@ -2574,16 +2823,16 @@
 
   /* Стили для поля поиска */
   .th-search-input {
-    padding: 0.875rem 0.3rem 0.675rem 2rem;
+    padding: 0.875rem 0.3rem 0.675rem 2.5rem;
     border: 2px solid #e2e8f0;
     border-radius: 12px;
-    font-size: 0.575rem;
+    font-size: 0.875rem;
     width: 100%;
     outline: none;
     background: #f8fafc
-      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e")
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e")
       no-repeat left 0.75rem center;
-    background-size: 1.25rem;
+    background-size: 1.5rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     color: #1e293b;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -2592,6 +2841,7 @@
   .th-search-input:hover {
     border-color: #3b82f6;
     background-color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e");
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.1),
       0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -2600,10 +2850,11 @@
 
   .th-search-input:focus {
     border-color: #3b82f6;
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e");
     box-shadow:
       0 0 0 4px rgba(59, 130, 246, 0.1),
       0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    background-color: white;
     transform: translateY(-1px);
   }
 
@@ -2933,11 +3184,14 @@
   }
 
   .mobile-filter-input {
-    padding: 0.75rem;
+    padding: 0.75rem 0.75rem 0.75rem 3rem;
     border: 2px solid #e2e8f0;
     border-radius: 8px;
     font-size: 16px; /* Предотвращает зум на iOS */
-    background: white;
+    background: white
+      url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e")
+      no-repeat left 1rem center;
+    background-size: 1.5rem;
     transition: all 0.3s ease;
   }
 
@@ -2945,6 +3199,20 @@
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e");
+  }
+
+  .mobile-filter-input:hover {
+    border-color: #3b82f6;
+    background-color: white;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e");
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-filter-input::placeholder {
+    color: #94a3b8;
+    font-weight: 400;
   }
 
   .mobile-date-picker {
@@ -3030,141 +3298,438 @@
     box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
   }
 
-  /* Планшетные стили для iPad */
+  /* Планшетные стили для iPad Pro/Air - улучшенная версия */
   @media (min-width: 768px) and (max-width: 1024px) {
+    .reports-container {
+      padding: 2rem;
+      max-width: 100%;
+    }
+
+    .main-content {
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .page-header {
+      padding: 2rem 2.5rem;
+      gap: 2rem;
+    }
+
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: nowrap;
+      gap: 2rem;
+    }
+
+    .header-content h1 {
+      font-size: 2.25rem;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .timezone-selector {
+      background: white;
+      padding: 1rem 1.5rem;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      border: 2px solid #e2e8f0;
+      min-width: 300px;
+    }
+
+    .timezone-selector label {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .timezone-selector select {
+      font-size: 1rem;
+      padding: 0.875rem 1rem;
+      min-height: 48px;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      min-width: 200px;
+      max-width: 250px;
+    }
+
+    .table-container {
+      border-radius: 20px;
+      overflow: hidden;
+      margin: 1rem 2rem 2rem 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    .reports-table {
+      font-size: 1rem;
+      min-width: 100%;
+      table-layout: auto;
+    }
+
+    .reports-table th {
+      padding: 1.25rem 1rem;
+      font-size: 1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .reports-table td {
+      padding: 1.25rem 1rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* Оптимизируем ширину колонок для iPad */
+    .reports-table th:nth-child(1) { width: 12%; } /* Партия */
+    .reports-table th:nth-child(2) { width: 12%; } /* Продукт */
+    .reports-table th:nth-child(3) { width: 15%; } /* Дата производства */
+    .reports-table th:nth-child(4) { width: 15%; } /* Дата срока годности */
+    .reports-table th:nth-child(5) { width: 12%; } /* Произведено */
+    .reports-table th:nth-child(6) { width: 12%; } /* Данные ВетИС */
+    .reports-table th:nth-child(7) { width: 10%; } /* Разница */
+    .reports-table th:nth-child(8) { width: 12%; } /* До отправки */
+    .reports-table th:nth-child(9) { width: 10%; } /* Статус */
+
+    .deadline-cell {
+      min-width: 160px;
+      max-width: 200px;
+    }
+
+    .time-remaining {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .deadline-date {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    .status-badge {
+      font-size: 0.8rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-weight: 600;
+      min-width: 100px;
+    }
+
+    .send-btn {
+      font-size: 0.8rem;
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-weight: 600;
+    }
+
+    .th-search-input {
+      font-size: 1rem;
+      padding: 0.875rem 1rem 0.875rem 3rem;
+      min-height: 48px;
+      border-radius: 12px;
+      background-size: 1.75rem;
+    }
+
+    .date-field {
+      font-size: 1rem;
+      padding: 0.875rem 1rem;
+      min-height: 48px;
+      border-radius: 12px;
+    }
+
+    .sort-button {
+      padding: 0.875rem;
+      font-size: 1rem;
+      min-height: 48px;
+      min-width: 48px;
+      border-radius: 12px;
+    }
+
+    .clear-icon {
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+
+    /* Улучшенная пагинация для iPad */
+    .pagination {
+      padding: 1.5rem 2rem;
+      gap: 1rem;
+      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+
+    .pagination button,
+    .pagination span {
+      padding: 0.75rem 1rem;
+      font-size: 1rem;
+      min-width: 48px;
+      height: 48px;
+      border-radius: 12px;
+    }
+
+    /* Детали партии для iPad */
+    .batch-info-card {
+      padding: 1.5rem;
+      margin: 1rem 2rem;
+      border-radius: 16px;
+      border-left: 4px solid #3b82f6;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .batch-info-header {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .process-flow-mini {
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: nowrap;
+    }
+
+    .flow-item-mini {
+      font-size: 0.8rem;
+      gap: 0.5rem;
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .flow-circle-mini {
+      width: 32px;
+      height: 32px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      border: 2px solid transparent;
+    }
+
+    .flow-arrow-mini {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+  }
+
+  /* iPad Portrait - оптимизированный режим */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
     .reports-container {
       padding: 1.5rem;
     }
 
     .page-header {
-      gap: 1.5rem;
-    }
-
-    .header-content h1 {
-      font-size: 1.75rem;
-    }
-
-    .timezone-selector select {
-      font-size: 16px;
-      padding: 0.75rem;
-      min-height: 44px;
-    }
-
-    .table-container {
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .reports-table {
-      font-size: 0.9rem;
-    }
-
-    .reports-table th,
-    .reports-table td {
-      padding: 0.75rem 0.5rem;
-      font-size: 0.85rem;
-    }
-
-    .reports-table th {
-      font-size: 0.875rem;
-    }
-
-    .deadline-cell {
-      min-width: 140px;
-      max-width: 160px;
-    }
-
-    .time-remaining {
-      font-size: 0.8rem;
-    }
-
-    .deadline-date {
-      font-size: 0.75rem;
-    }
-
-    .status-badge {
-      font-size: 0.75rem;
-      padding: 0.375rem 0.75rem;
-    }
-
-    .th-content {
-      gap: 0.75rem;
-    }
-
-    .th-title {
-      font-size: 0.875rem;
-    }
-
-    .th-search-dropdown {
-      border-radius: 8px;
-    }
-
-    .th-search-input {
-      font-size: 16px;
-      padding: 0.625rem;
-      min-height: 44px;
-    }
-
-    .date-filter {
-      padding: 0.75rem;
-    }
-
-    .date-field {
-      font-size: 16px;
-      padding: 0.625rem;
-      min-height: 44px;
-    }
-
-    .sort-button {
-      padding: 0.625rem;
-      font-size: 0.875rem;
-      min-height: 44px;
-    }
-
-    .clear-icon {
-      width: 20px;
-      height: 20px;
-      font-size: 11px;
-    }
-  }
-
-  /* iPad Portrait - компактный режим */
-  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-    .reports-container {
-      padding: 1.25rem;
-    }
-
-    .reports-table th:nth-child(n+5),
-    .reports-table td:nth-child(n+5) {
-      display: none; /* Скрываем некоторые колонки в портрете */
+      padding: 1.5rem 2rem;
     }
 
     .header-content {
       flex-direction: column;
       text-align: center;
-      gap: 1rem;
+      gap: 1.5rem;
+      align-items: center;
+    }
+
+    .header-content h1 {
+      font-size: 2rem;
+    }
+
+    .timezone-selector {
+      width: 100%;
+      max-width: 400px;
+      margin: 0 auto;
+    }
+
+    .table-container {
+      margin: 1rem;
+    }
+
+    /* Скрываем менее важные колонки в портретной ориентации для экономии места */
+    .reports-table th:nth-child(4),
+    .reports-table td:nth-child(4) {
+      display: none; /* Скрываем дату срока годности */
+    }
+
+    .reports-table th:nth-child(6),
+    .reports-table td:nth-child(6) {
+      display: none; /* Скрываем данные ВетИС */
+    }
+
+    /* Перераспределяем ширину оставшихся колонок */
+    .reports-table th:nth-child(1) { width: 15%; } /* Партия */
+    .reports-table th:nth-child(2) { width: 15%; } /* Продукт */
+    .reports-table th:nth-child(3) { width: 18%; } /* Дата производства */
+    .reports-table th:nth-child(5) { width: 12%; } /* Произведено */
+    .reports-table th:nth-child(7) { width: 12%; } /* Разница */
+    .reports-table th:nth-child(8) { width: 15%; } /* До отправки */
+    .reports-table th:nth-child(9) { width: 13%; } /* Статус */
+
+    .batch-info-card {
+      margin: 0.5rem;
+      padding: 1rem;
+    }
+
+    .process-flow-mini {
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .flow-item-mini {
+      font-size: 0.7rem;
+      min-width: 60px;
+    }
+
+    .flow-circle-mini {
+      width: 24px;
+      height: 24px;
+      font-size: 0.7rem;
+    }
+
+    .flow-arrow-mini {
+      font-size: 1rem;
     }
   }
 
-  /* iPad Landscape - полная функциональность */
+  /* iPad Pro/Air Landscape - максимальная функциональность */
   @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
     .reports-container {
-      padding: 2rem;
+      padding: 2.5rem;
+      max-width: 100%;
+    }
+
+    .main-content {
+      border-radius: 24px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    }
+
+    .page-header {
+      padding: 2.5rem 3rem;
+    }
+
+    .header-content h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+    }
+
+    .timezone-selector {
+      padding: 1.25rem 2rem;
+      border-radius: 20px;
+      min-width: 350px;
+    }
+
+    .timezone-selector select {
+      font-size: 1.1rem;
+      padding: 1rem 1.25rem;
+      min-height: 52px;
+      min-width: 220px;
+      max-width: 280px;
+    }
+
+    .table-container {
+      margin: 1.5rem 3rem 2.5rem 3rem;
+      border-radius: 24px;
     }
 
     .reports-table {
-      font-size: 0.95rem;
+      font-size: 1.1rem;
     }
 
-    .reports-table th,
+    .reports-table th {
+      padding: 1.5rem 1.25rem;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
     .reports-table td {
-      padding: 1rem 0.75rem;
+      padding: 1.5rem 1.25rem;
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    /* Оптимальные ширины колонок для большого экрана */
+    .reports-table th:nth-child(1) { width: 10%; } /* Партия */
+    .reports-table th:nth-child(2) { width: 10%; } /* Продукт */
+    .reports-table th:nth-child(3) { width: 13%; } /* Дата производства */
+    .reports-table th:nth-child(4) { width: 13%; } /* Дата срока годности */
+    .reports-table th:nth-child(5) { width: 11%; } /* Произведено */
+    .reports-table th:nth-child(6) { width: 11%; } /* Данные ВетИС */
+    .reports-table th:nth-child(7) { width: 10%; } /* Разница */
+    .reports-table th:nth-child(8) { width: 12%; } /* До отправки */
+    .reports-table th:nth-child(9) { width: 10%; } /* Статус */
+
+    .deadline-cell {
+      min-width: 180px;
+      max-width: 220px;
+    }
+
+    .time-remaining {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .deadline-date {
       font-size: 0.9rem;
     }
 
-    .deadline-cell {
-      min-width: 160px;
-      max-width: 180px;
+    .status-badge {
+      font-size: 0.9rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 24px;
+      font-weight: 700;
+      min-width: 120px;
+    }
+
+    .send-btn {
+      font-size: 0.9rem;
+      padding: 0.6rem 1.25rem;
+      border-radius: 16px;
+    }
+
+    .pagination {
+      padding: 2rem 3rem;
+      gap: 1.25rem;
+    }
+
+    .pagination button,
+    .pagination span {
+      padding: 1rem 1.25rem;
+      font-size: 1.1rem;
+      min-width: 52px;
+      height: 52px;
+      border-radius: 16px;
+    }
+
+    .batch-info-card {
+      padding: 2rem;
+      margin: 1.5rem 3rem;
+      border-radius: 20px;
+      border-left: 6px solid #3b82f6;
+    }
+
+    .batch-info-header {
+      font-size: 1.2rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .process-flow-mini {
+      gap: 1.5rem;
+    }
+
+    .flow-item-mini {
+      font-size: 0.9rem;
+      gap: 0.75rem;
+      min-width: 100px;
+    }
+
+    .flow-circle-mini {
+      width: 40px;
+      height: 40px;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+
+    .flow-arrow-mini {
+      font-size: 1.5rem;
+      font-weight: 700;
     }
   }
 

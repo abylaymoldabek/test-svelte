@@ -133,7 +133,7 @@
       </section>
 
       <!-- Настройки этикетки -->
-      <section class="settings-section">
+      <!-- <section class="settings-section">
         <h2>Настройки этикетки</h2>
         <div class="form-grid">
           <div class="form-group">
@@ -193,10 +193,10 @@
             </label>
           </div>
         </div>
-      </section>
+      </section> -->
 
       <!-- Дополнительные настройки -->
-      <section class="settings-section">
+      <!-- <section class="settings-section">
         <h2>Дополнительные настройки</h2>
         <div class="checkbox-list">
           <label class="checkbox-label">
@@ -253,7 +253,7 @@
           />
           <button class="reset-color">Цвет по умолчанию</button>
         </div>
-      </section>
+      </section> -->
 
       <section class="settings-vetis">
         <h2>Настройки ВетИС</h2>
