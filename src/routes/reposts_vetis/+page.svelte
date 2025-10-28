@@ -1601,9 +1601,6 @@
       <!-- svelte-ignore a11y-click-events-have-key-events -->
       <!-- svelte-ignore a11y-no-static-element-interactions -->
       <div class="modal-overlay" role="dialog" aria-modal="true" tabindex="-1">
-        <button class="modal-overlay-button" on:click={closeConfirmModal}>
-          <span class="sr-only">Close modal</span>
-        </button>
         <div class="modal-content" role="document">
           <div class="modal-header">
             <h3>Экран Подтверждения</h3>
