@@ -656,6 +656,116 @@
     -moz-appearance: textfield;
   }
 
+  /* Планшетные стили для iPad */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    .settings-page {
+      padding: 1.5rem;
+      max-width: 100%;
+    }
+
+    .expiration-info {
+      gap: 2rem;
+      padding: 1rem 1.5rem;
+    }
+
+    .renew-button {
+      padding: 0.75rem 1.5rem;
+      min-height: 48px;
+    }
+
+    .settings-section {
+      padding: 2.5rem;
+      border-radius: 16px;
+    }
+
+    .form-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.75rem;
+    }
+
+    label {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+
+    input,
+    select {
+      font-size: 16px !important;
+      padding: 0.875rem;
+      min-height: 48px;
+      border-radius: 8px;
+    }
+
+    input[type="color"] {
+      height: 54px;
+      margin-bottom: 1rem;
+      border-radius: 8px;
+    }
+
+    .reset-color {
+      padding: 0.75rem 1.5rem;
+      min-height: 48px;
+      border-radius: 8px;
+    }
+
+    .form-actions {
+      margin-top: 3rem;
+      padding: 1.5rem;
+    }
+
+    .save-button {
+      padding: 1rem 2rem;
+      font-size: 1rem;
+      min-height: 52px;
+      border-radius: 10px;
+    }
+
+    h2 {
+      font-size: 1.375rem;
+      margin-bottom: 2.5rem;
+    }
+
+    .settings-grid {
+      gap: 2.5rem;
+    }
+  }
+
+  /* iPad Portrait - одна колонка для форм */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+
+    .settings-section {
+      padding: 2rem;
+    }
+  }
+
+  /* iPad Landscape - две колонки */
+  @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .settings-page {
+      padding: 2rem;
+    }
+
+    .form-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 3rem;
+    }
+
+    .settings-section {
+      padding: 3rem;
+    }
+
+    h2 {
+      font-size: 1.5rem;
+    }
+  }
+
   /* Медиа-запросы для мобильных устройств */
   @media (max-width: 768px) {
     .settings-page {

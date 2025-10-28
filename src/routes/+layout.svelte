@@ -80,6 +80,30 @@
     font-family: inherit;
   }
 
+  /* Tablet and iPad responsive */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .main-content {
+      margin-left: 200px; /* Увеличенный сайдбар на планшетах */
+      padding: 1.5rem;
+    }
+  }
+
+  /* iPad Portrait (768x1024) */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .main-content {
+      margin-left: 0;
+      padding: 1.25rem;
+    }
+  }
+
+  /* iPad Landscape (1024x768) */
+  @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .main-content {
+      margin-left: 220px;
+      padding: 2rem;
+    }
+  }
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .main-content {
@@ -93,6 +117,80 @@
     .main-content {
       padding: 0.75rem;
       margin-top: 50px;
+    }
+  }
+
+  /* Глобальные планшетные стили */
+  @media (min-width: 768px) and (max-width: 1024px) {
+    :global(body) {
+      font-size: 15px;
+    }
+    
+    :global(h1) {
+      font-size: 2rem;
+    }
+    
+    :global(h2) {
+      font-size: 1.5rem;
+    }
+    
+    :global(h3) {
+      font-size: 1.25rem;
+    }
+    
+    :global(input, select, textarea) {
+      font-size: 16px !important; /* Предотвращает зум на iPad */
+      min-height: 44px; /* Комфортное касание на iPad */
+    }
+    
+    :global(button) {
+      min-height: 48px; /* Увеличенная область касания для планшетов */
+      padding: 0.75rem 1.5rem;
+    }
+    
+    :global(table) {
+      font-size: 0.95rem; /* Оптимальный размер для планшетов */
+    }
+
+    /* Улучшенное сенсорное управление для iPad */
+    :global(button, a, [role="button"]) {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    :global(input, select, textarea) {
+      appearance: none;
+      -webkit-appearance: none;
+      border-radius: 8px;
+    }
+
+    :global(input[type="range"]) {
+      appearance: none;
+      -webkit-appearance: none;
+      height: 44px;
+    }
+
+    :global(*) {
+      scrollbar-width: thin;
+    }
+
+    :global(*::-webkit-scrollbar) {
+      width: 8px;
+      height: 8px;
+    }
+
+    :global(*::-webkit-scrollbar-track) {
+      background: #f1f1f1;
+      border-radius: 4px;
+    }
+
+    :global(*::-webkit-scrollbar-thumb) {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+
+    :global(*::-webkit-scrollbar-thumb:hover) {
+      background: #a8a8a8;
     }
   }
 

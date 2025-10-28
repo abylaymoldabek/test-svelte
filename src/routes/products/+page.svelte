@@ -603,6 +603,95 @@ th .sort-button.active {
   box-shadow: 0 4px 6px rgba(220, 38, 38, 0.2);
 }
 
+/* Планшетная адаптация для iPad */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .products-page {
+    padding: 1.5rem;
+  }
+
+  .btn-add {
+    padding: 0.875rem 1.75rem;
+    font-size: 1rem;
+    min-height: 48px;
+  }
+
+  .products-table {
+    font-size: 0.9rem;
+    border-radius: 12px;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: 0.875rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .products-table th {
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  .th-search-input {
+    font-size: 16px;
+    padding: 0.625rem;
+    min-height: 44px;
+  }
+
+  .sort-button {
+    min-height: 44px;
+    padding: 0.625rem;
+  }
+
+  .pagination {
+    gap: 0.5rem;
+  }
+
+  .pagination-button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 1rem;
+    border-radius: 8px;
+  }
+
+  .pagination-info {
+    font-size: 1rem;
+  }
+}
+
+/* iPad Portrait - скрываем некоторые колонки */
+@media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+  .products-table th:nth-child(n+4),
+  .products-table td:nth-child(n+4) {
+    display: none;
+  }
+
+  .products-page {
+    padding: 1.25rem;
+  }
+}
+
+/* iPad Landscape - полная таблица */
+@media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+  .products-page {
+    padding: 2rem;
+  }
+
+  .products-table {
+    font-size: 0.95rem;
+  }
+
+  .products-table th,
+  .products-table td {
+    padding: 1rem 0.875rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-add {
+    padding: 1rem 2rem;
+    font-size: 1.125rem;
+  }
+}
+
 /* Мобильная адаптация */
 @media (max-width: 768px) {
   .products-page {

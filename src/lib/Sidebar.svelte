@@ -184,6 +184,41 @@
     flex-shrink: 0;
   }
 
+  /* Tablet responsive */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .sidebar {
+      width: 200px; /* Увеличенная ширина на планшетах */
+    }
+    
+    .nav-link {
+      padding: 0.75rem 1rem;
+      font-size: 0.875rem;
+    }
+    
+    .icon {
+      font-size: 1.125rem;
+    }
+  }
+
+  /* iPad Portrait */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .sidebar {
+      display: none; /* Скрываем в портретной ориентации iPad */
+    }
+  }
+
+  /* iPad Landscape */
+  @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .sidebar {
+      width: 220px;
+    }
+    
+    .nav-link {
+      padding: 0.875rem 1.25rem;
+      font-size: 0.9rem;
+    }
+  }
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .sidebar {

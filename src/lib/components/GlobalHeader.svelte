@@ -257,6 +257,55 @@
     flex-shrink: 0;
   }
 
+  /* Tablet responsive */
+  @media (min-width: 769px) and (max-width: 1024px) {
+    .header-content {
+      padding: 0 1.5rem;
+    }
+    
+    .logo {
+      height: 36px;
+    }
+    
+    .user-info {
+      display: flex; /* Показываем на планшетах */
+    }
+    
+    .user-name {
+      font-size: 1rem;
+    }
+    
+    .logout-btn {
+      padding: 0.625rem;
+    }
+  }
+
+  /* iPad Portrait - показываем burger menu */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .burger-menu {
+      display: flex;
+    }
+    
+    .user-info {
+      display: none;
+    }
+  }
+
+  /* iPad Landscape - полный header */
+  @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .header-content {
+      padding: 0 2rem;
+    }
+    
+    .logo {
+      height: 38px;
+    }
+    
+    .user-name {
+      font-size: 1rem;
+    }
+  }
+
   /* Mobile responsive */
   @media (max-width: 768px) {
     .header-content {

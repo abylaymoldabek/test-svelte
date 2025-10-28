@@ -3,8 +3,8 @@
   import { onMount } from 'svelte';
 
   onMount(() => {
-    // Автоматически перенаправляем на страницу onboarding
-    goto('/onboarding');
+    // Автоматически перенаправляем на страницу dashboard
+    goto('/dashboard');
   });
 </script>
 

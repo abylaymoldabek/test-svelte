@@ -13,6 +13,17 @@
       checkAuthAndRedirect($page.url.pathname);
     }, 100);
 
+    // Функция для проверки размера экрана
+    const checkScreenSize = () => {
+      isMobile = window.innerWidth <= 768;
+    };
+
+    // Проверяем размер экрана при загрузке
+    checkScreenSize();
+
+    // Слушаем изменения размера экрана
+    window.addEventListener('resize', checkScreenSize);
+
     // Таймер для обновления времени до дедлайна каждую минуту
     const interval = setInterval(() => {
       // Обновляем текущее время для пересчета дедлайнов
@@ -21,6 +32,7 @@
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('resize', checkScreenSize);
     };
   });
 
@@ -557,6 +569,10 @@
   let dateFormat = 'yyyy-MM-dd';
   let isDatePickerOpen = false;
 
+  // Мобильные даты в формате YYYY-MM-DD для HTML5 inputs
+  let mobileDateFrom = "";
+  let mobileDateTo = "";
+
   // Сортировка
   let sortField = "";
   let sortOrder: "asc" | "desc" = "asc";
@@ -567,6 +583,10 @@
   let deadlineTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone; // Инициализируем с той же таймзоной
 
   let currentTime = Date.now();
+
+  // Переменная для отслеживания мобильного режима
+  let isMobile = false;
+  let showMobileFilters = false;
 
   $: if (selectedTimezone) {
     deadlineTimezone = selectedTimezone;
@@ -749,16 +769,66 @@
     return format(new Date(dateString), dateFormat);
   };
 
-  // Синхронизация DatePicker с фильтрами
-  $: if (startDate) {
-    filters.dateFrom = formatDate(startDate);
+  // Flag to prevent cyclical updates
+  let updatingFromMobile = false;
+  let updatingFromDatePicker = false;
+
+  // Separate reactive blocks to prevent cycles
+  $: {
+    if (startDate && !updatingFromMobile) {
+      updatingFromDatePicker = true;
+      filters.dateFrom = formatDate(startDate);
+      const newMobileDateFrom = formatDateForInput(startDate);
+      if (mobileDateFrom !== newMobileDateFrom) {
+        mobileDateFrom = newMobileDateFrom;
+      }
+      updatingFromDatePicker = false;
+    }
   }
-  $: if (endDate) {
-    filters.dateTo = formatDate(endDate);
+
+  $: {
+    if (endDate && !updatingFromMobile) {
+      updatingFromDatePicker = true;
+      filters.dateTo = formatDate(endDate);
+      const newMobileDateTo = formatDateForInput(endDate);
+      if (mobileDateTo !== newMobileDateTo) {
+        mobileDateTo = newMobileDateTo;
+      }
+      updatingFromDatePicker = false;
+    }
+  }
+
+  // Use functions to handle mobile date changes instead of reactive statements
+  function handleMobileDateFromChange() {
+    if (mobileDateFrom && isMobile && !updatingFromDatePicker) {
+      const date = new Date(mobileDateFrom);
+      if (!isNaN(date.getTime())) {
+        updatingFromMobile = true;
+        startDate = date;
+        updatingFromMobile = false;
+      }
+    }
+  }
+
+  function handleMobileDateToChange() {
+    if (mobileDateTo && isMobile && !updatingFromDatePicker) {
+      const date = new Date(mobileDateTo);
+      if (!isNaN(date.getTime())) {
+        updatingFromMobile = true;
+        endDate = date;
+        updatingFromMobile = false;
+      }
+    }
   }
 
   $: formattedStartDate = formatDate(startDate);
   $: formattedEndDate = formatDate(endDate);
+
+  // Функция для форматирования даты для HTML5 input
+  function formatDateForInput(date: Date | null): string {
+    if (!date) return "";
+    return date.toISOString().split('T')[0];
+  }
 
   // Функция сортировки (только для дат)
   function sortBy(field: string) {
@@ -942,46 +1012,234 @@
         </div>
       </div>
 
-      <div class="table-container">
-        <table class="reports-table">
-          <thead>
-            <tr>
-              <th>
-                <div class="th-content">
-                  <div
-                    class="th-title"
-                    role="button"
-                    tabindex="0"
-                    on:click={() => {
-                      activeSearch = activeSearch === "party" ? "" : "party";
-                      if (activeSearch !== "party") {
-                        filters.party = "";
-                      }
-                    }}
-                    on:keydown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
+      <!-- Мобильная панель фильтров -->
+      {#if isMobile}
+        <div class="mobile-filters">
+          <button 
+            class="mobile-filter-toggle"
+            on:click={() => showMobileFilters = !showMobileFilters}
+          >
+            Фильтры {showMobileFilters ? '▲' : '▼'}
+          </button>
+          
+          {#if showMobileFilters}
+            <div class="mobile-filter-panel">
+              <div class="mobile-filter-section">
+                <label class="mobile-filter-label">Партия</label>
+                <input
+                  type="text"
+                  placeholder="Поиск по партии..."
+                  bind:value={filters.party}
+                  class="mobile-filter-input"
+                />
+              </div>
+              
+              <div class="mobile-filter-section">
+                <label class="mobile-filter-label">Дата производства</label>
+                <div class="mobile-date-picker">
+                  <div class="mobile-date-inputs">
+                    <div class="mobile-date-input-group">
+                      <label class="mobile-date-sublabel">От:</label>
+                      <input
+                        type="date"
+                        bind:value={mobileDateFrom}
+                        on:change={handleMobileDateFromChange}
+                        class="mobile-date-input"
+                        aria-label="Дата начала диапазона"
+                      />
+                    </div>
+                    <div class="mobile-date-input-group">
+                      <label class="mobile-date-sublabel">До:</label>
+                      <input
+                        type="date"
+                        bind:value={mobileDateTo}
+                        on:change={handleMobileDateToChange}
+                        class="mobile-date-input"
+                        aria-label="Дата окончания диапазона"
+                      />
+                    </div>
+                  </div>
+                  {#if mobileDateFrom || mobileDateTo}
+                    <button
+                      type="button"
+                      on:click={() => {
+                        mobileDateFrom = "";
+                        mobileDateTo = "";
+                        startDate = null;
+                        endDate = null;
+                        filters.dateFrom = "";
+                        filters.dateTo = "";
+                      }}
+                      class="mobile-clear-dates"
+                      aria-label="Очистить выбранные даты"
+                    >
+                      Очистить даты
+                    </button>
+                  {/if}
+                </div>
+              </div>
+              
+              <div class="mobile-filter-section">
+                <label class="mobile-filter-label">Статус</label>
+                <input
+                  type="text"
+                  placeholder="Поиск по статусу..."
+                  bind:value={filters.status}
+                  class="mobile-filter-input"
+                />
+              </div>
+              
+              <div class="mobile-filter-actions">
+                <button 
+                  class="mobile-clear-filters"
+                  on:click={() => {
+                    filters.party = "";
+                    filters.product = "";
+                    filters.status = "";
+                    filters.dateFrom = "";
+                    filters.dateTo = "";
+                    startDate = null;
+                    endDate = null;
+                    mobileDateFrom = "";
+                    mobileDateTo = "";
+                  }}
+                >
+                  Очистить
+                </button>
+              </div>
+            </div>
+          {/if}
+        </div>
+      {/if}
+
+      <!-- Мобильный кардочный вид -->
+      {#if isMobile}
+        <div class="mobile-cards-container">
+          {#each sortedBatches as batch}
+            <div 
+              class="mobile-card"
+              class:selected={selectedBatch === batch}
+              on:click={() => selectBatch(batch)}
+            >
+              <div class="mobile-card-header">
+                <div class="mobile-card-title">
+                  <strong>Партия: {batch.party}</strong>
+                  <span 
+                    class="status-badge mobile-status"
+                    class:produced={batch.status === "Произведено"}
+                    class:sent={batch.status.includes("Отправлена")}
+                    class:on-hold={batch.status === "На холде"}
+                    class:sending={batch.status.includes("Отправляется")}
+                  >
+                    {batch.status}
+                  </span>
+                </div>
+                <div class="mobile-card-product">{batch.product}</div>
+              </div>
+              
+              <div class="mobile-card-body">
+                <div class="mobile-card-row">
+                  <span class="mobile-label">Дата производства:</span>
+                  <span class="mobile-value">{formatDateInTimezone(batch.productionDate)}</span>
+                </div>
+                
+                <div class="mobile-card-row">
+                  <span class="mobile-label">Срок годности:</span>
+                  <span class="mobile-value">{formatDateInTimezone(batch.expiryDate)}</span>
+                </div>
+                
+                <div class="mobile-card-row">
+                  <span class="mobile-label">Произведено:</span>
+                  <span class="mobile-value">{batch.produced.toLocaleString()}</span>
+                </div>
+                
+                <div class="mobile-card-row">
+                  <span class="mobile-label">Данные ВетИС:</span>
+                  <span class="mobile-value">{batch.vetis.toLocaleString()}</span>
+                </div>
+                
+                <div class="mobile-card-row">
+                  <span class="mobile-label">Разница:</span>
+                  <span 
+                    class="mobile-value difference-mobile"
+                    class:critical={isCriticalDeviation(batch.produced, batch.vetis)}
+                    class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) < 0}
+                    class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) > 0}
+                    class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) === 0}
+                  >
+                    {formatDifference(calculateDifference(batch.produced, batch.vetis))} ({calculatePercentage(batch.produced, batch.vetis)}%)
+                  </span>
+                </div>
+                
+                <div class="mobile-card-row">
+                  <span class="mobile-label">До отправки:</span>
+                  <span 
+                    class="mobile-value deadline-mobile"
+                    class:deadline-overdue={getDeadlineStatus(batch.deadline, batch.status) === "overdue"}
+                    class:deadline-critical={getDeadlineStatus(batch.deadline, batch.status) === "critical"}
+                    class:deadline-warning={getDeadlineStatus(batch.deadline, batch.status) === "warning"}
+                    class:deadline-normal={getDeadlineStatus(batch.deadline, batch.status) === "normal"}
+                  >
+                    {getTimeUntilDeadline(batch.deadline, batch.status)}
+                  </span>
+                </div>
+              </div>
+              
+              {#if batch.status === "На холде"}
+                <div class="mobile-card-actions">
+                  <button
+                    class="send-btn mobile-send-btn"
+                    on:click|stopPropagation={openConfirmModal}
+                  >
+                    Отправить
+                  </button>
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {:else}
+        <!-- Десктопный табличный вид -->
+        <div class="table-container">
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>
+                  <div class="th-content">
+                    <div
+                      class="th-title"
+                      role="button"
+                      tabindex="0"
+                      on:click={() => {
                         activeSearch = activeSearch === "party" ? "" : "party";
                         if (activeSearch !== "party") {
                           filters.party = "";
                         }
-                      }
-                    }}
-                  >
-                    <span>Партия</span>
-                  </div>
-                  {#if activeSearch === "party"}
-                    <div class="th-search-dropdown">
-                      <input
-                        type="text"
-                        placeholder="Поиск по партии..."
-                        bind:value={filters.party}
-                        class="th-search-input"
-                      />
+                      }}
+                      on:keydown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          activeSearch = activeSearch === "party" ? "" : "party";
+                          if (activeSearch !== "party") {
+                            filters.party = "";
+                          }
+                        }
+                      }}
+                    >
+                      <span>Партия</span>
                     </div>
-                  {/if}
-                </div>
-              </th>
+                    {#if activeSearch === "party"}
+                      <div class="th-search-dropdown">
+                        <input
+                          type="text"
+                          placeholder="Поиск по партии..."
+                          bind:value={filters.party}
+                          class="th-search-input"
+                        />
+                      </div>
+                    {/if}
+                  </div>
+                </th>
               <th>
                 <div class="th-content">
                   <div
@@ -1321,7 +1579,8 @@
             {/each}
           </tbody>
         </table>
-      </div>
+        </div>
+      {/if}
 
       <!-- Pagination -->
       <div class="pagination">
@@ -2482,13 +2741,447 @@
     background: #dc2626;
   }
 
-  /* Медиа-запросы для мобильных устройств */
-  @media (max-width: 768px) {
+  /* Стили для мобильных карточек */
+  .mobile-cards-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+
+  .mobile-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .mobile-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  .mobile-card.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  }
+
+  .mobile-card-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .mobile-card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .mobile-card-title strong {
+    font-size: 1rem;
+    color: #1e293b;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-status {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .mobile-card-product {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .mobile-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 1.5rem;
+  }
+
+  .mobile-label {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+    flex-shrink: 0;
+    min-width: 120px;
+  }
+
+  .mobile-value {
+    font-size: 0.875rem;
+    color: #1e293b;
+    font-weight: 600;
+    text-align: right;
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  .difference-mobile.positive {
+    color: #059669;
+  }
+
+  .difference-mobile.negative {
+    color: #dc2626;
+  }
+
+  .difference-mobile.neutral {
+    color: #6b7280;
+  }
+
+  .difference-mobile.critical {
+    color: #dc2626;
+    background-color: #fef2f2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+  }
+
+  .deadline-mobile.deadline-normal {
+    color: #059669;
+  }
+
+  .deadline-mobile.deadline-warning {
+    color: #d97706;
+  }
+
+  .deadline-mobile.deadline-critical {
+    color: #dc2626;
+    font-weight: 700;
+  }
+
+  .deadline-mobile.deadline-overdue {
+    color: #991b1b;
+    font-weight: 700;
+  }
+
+  .mobile-card-actions {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .mobile-send-btn {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+    min-width: auto;
+  }
+
+  /* Стили для мобильной панели фильтров */
+  .mobile-filters {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+  }
+
+  .mobile-filter-toggle {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: none;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-filter-toggle:hover {
+    background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  }
+
+  .mobile-filter-panel {
+    padding: 1rem;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .mobile-filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mobile-filter-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .mobile-filter-input {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px; /* Предотвращает зум на iOS */
+    background: white;
+    transition: all 0.3s ease;
+  }
+
+  .mobile-filter-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .mobile-date-picker {
+    width: 100%;
+  }
+
+  .mobile-date-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .mobile-date-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .mobile-date-sublabel {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #6b7280;
+  }
+
+  .mobile-date-input {
+    padding: 0.75rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 16px; /* Предотвращает зум на iOS */
+    background: white;
+    transition: all 0.3s ease;
+    color: #374151;
+    font-family: inherit;
+  }
+
+  .mobile-date-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .mobile-clear-dates {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 0.5rem;
+    align-self: flex-start;
+  }
+
+  .mobile-clear-dates:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transform: translateY(-1px);
+  }
+
+  .mobile-filter-actions {
+    display: flex;
+    justify-content: center;
+    margin-top: 0.5rem;
+  }
+
+  .mobile-clear-filters {
+    background: linear-gradient(135deg, #f87171 0%, #ef4444 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  }
+
+  .mobile-clear-filters:hover {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(239, 68, 68, 0.4);
+  }
+
+  /* Планшетные стили для iPad */
+  @media (min-width: 768px) and (max-width: 1024px) {
     .reports-container {
-      padding: 1rem;
+      padding: 1.5rem;
     }
 
     .page-header {
+      gap: 1.5rem;
+    }
+
+    .header-content h1 {
+      font-size: 1.75rem;
+    }
+
+    .timezone-selector select {
+      font-size: 16px;
+      padding: 0.75rem;
+      min-height: 44px;
+    }
+
+    .table-container {
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .reports-table {
+      font-size: 0.9rem;
+    }
+
+    .reports-table th,
+    .reports-table td {
+      padding: 0.75rem 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .reports-table th {
+      font-size: 0.875rem;
+    }
+
+    .deadline-cell {
+      min-width: 140px;
+      max-width: 160px;
+    }
+
+    .time-remaining {
+      font-size: 0.8rem;
+    }
+
+    .deadline-date {
+      font-size: 0.75rem;
+    }
+
+    .status-badge {
+      font-size: 0.75rem;
+      padding: 0.375rem 0.75rem;
+    }
+
+    .th-content {
+      gap: 0.75rem;
+    }
+
+    .th-title {
+      font-size: 0.875rem;
+    }
+
+    .th-search-dropdown {
+      border-radius: 8px;
+    }
+
+    .th-search-input {
+      font-size: 16px;
+      padding: 0.625rem;
+      min-height: 44px;
+    }
+
+    .date-filter {
+      padding: 0.75rem;
+    }
+
+    .date-field {
+      font-size: 16px;
+      padding: 0.625rem;
+      min-height: 44px;
+    }
+
+    .sort-button {
+      padding: 0.625rem;
+      font-size: 0.875rem;
+      min-height: 44px;
+    }
+
+    .clear-icon {
+      width: 20px;
+      height: 20px;
+      font-size: 11px;
+    }
+  }
+
+  /* iPad Portrait - компактный режим */
+  @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+    .reports-container {
+      padding: 1.25rem;
+    }
+
+    .reports-table th:nth-child(n+5),
+    .reports-table td:nth-child(n+5) {
+      display: none; /* Скрываем некоторые колонки в портрете */
+    }
+
+    .header-content {
+      flex-direction: column;
+      text-align: center;
+      gap: 1rem;
+    }
+  }
+
+  /* iPad Landscape - полная функциональность */
+  @media (min-width: 1024px) and (max-width: 1366px) and (orientation: landscape) {
+    .reports-container {
+      padding: 2rem;
+    }
+
+    .reports-table {
+      font-size: 0.95rem;
+    }
+
+    .reports-table th,
+    .reports-table td {
+      padding: 1rem 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .deadline-cell {
+      min-width: 160px;
+      max-width: 180px;
+    }
+  }
+
+  /* Медиа-запросы для мобильных устройств */
+  @media (max-width: 768px) {
+    .reports-container {
+      padding: 0.75rem;
+    }
+
+    .page-header {
+      padding: 1rem;
+    }
+
+    .header-content {
       flex-direction: column;
       gap: 1rem;
       text-align: center;
@@ -2496,111 +3189,92 @@
 
     .header-content h1 {
       font-size: 1.5rem;
+      margin-bottom: 0.5rem;
     }
 
     .timezone-selector {
-      margin-top: 1rem;
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+      padding: 0.75rem;
     }
 
     .timezone-selector label {
       font-size: 0.875rem;
+      min-width: auto;
     }
 
     .timezone-selector select {
       font-size: 16px; /* Предотвращает зум на iOS */
       padding: 0.75rem;
+      width: 100%;
+      max-width: 100%;
+      min-width: auto;
     }
 
+    /* Скрываем таблицу на мобильных - используем карточки */
     .table-container {
-      margin: 0 -1rem;
-      border-radius: 0;
+      display: none;
     }
 
-    .reports-table {
-      font-size: 0.75rem;
-      border-radius: 0;
+    /* Стили для мобильных карточек оптимизированы для маленьких экранов */
+    .mobile-cards-container {
+      padding: 0;
+      gap: 0.75rem;
     }
 
-    .reports-table th,
-    .reports-table td {
-      padding: 0.5rem 0.25rem;
-      font-size: 0.7rem;
+    .mobile-card {
+      padding: 0.75rem;
+      border-radius: 8px;
     }
 
-    .reports-table th {
-      white-space: nowrap;
+    .mobile-card-title strong {
+      font-size: 0.9rem;
     }
 
-    .reports-table td {
-      max-width: 100px;
-      word-break: break-word;
+    .mobile-card-product {
+      font-size: 0.8rem;
     }
 
-    .deadline-cell {
+    .mobile-label {
+      font-size: 0.8rem;
       min-width: 100px;
-      max-width: 120px;
     }
 
-    .time-remaining {
+    .mobile-value {
+      font-size: 0.8rem;
+    }
+
+    .mobile-status {
       font-size: 0.7rem;
-    }
-
-    .deadline-date {
-      font-size: 0.6rem;
-    }
-
-    .status-badge {
-      font-size: 0.5rem;
       padding: 0.2rem 0.4rem;
-      white-space: nowrap;
     }
 
-    .th-content {
-      flex-direction: column;
+    /* Мобильные даты оптимизированы */
+    .mobile-date-inputs {
       gap: 0.5rem;
     }
 
-    .th-title {
-      font-size: 0.75rem;
-    }
-
-    .th-search-dropdown {
-      position: static;
-      width: 100%;
-      max-height: none;
-      box-shadow: none;
-      border: 1px solid #e5e7eb;
-      border-radius: 4px;
-    }
-
-    .th-search-input {
+    .mobile-date-input {
+      padding: 0.625rem;
       font-size: 16px;
-      padding: 0.5rem;
     }
 
-    .date-filter {
-      padding: 0.5rem;
+    .mobile-filter-panel {
+      padding: 0.75rem;
     }
 
-    .date-field {
-      font-size: 16px;
-      padding: 0.5rem;
-    }
-
-    .sort-button {
-      padding: 0.5rem;
-      font-size: 0.75rem;
-    }
-
-    .clear-icon {
-      width: 16px;
-      height: 16px;
-      font-size: 9px;
+    .mobile-filter-section {
+      gap: 0.375rem;
     }
   }
 
   @media (max-width: 480px) {
     .reports-container {
+      padding: 0.5rem;
+    }
+
+    .page-header {
       padding: 0.75rem;
     }
 
@@ -2608,39 +3282,48 @@
       font-size: 1.25rem;
     }
 
-    .reports-table th,
-    .reports-table td {
-      padding: 0.375rem 0.2rem;
-      font-size: 0.65rem;
-    }
-
-    .deadline-cell {
-      min-width: 90px;
-      max-width: 100px;
-    }
-
-    .status-badge {
-      font-size: 0.45rem;
-      padding: 0.15rem 0.3rem;
-    }
-
-    .th-title {
-      font-size: 0.7rem;
-    }
-
-    .th-search-input,
-    .date-field {
-      font-size: 16px;
-      padding: 0.375rem;
-    }
-
-    .sort-button {
-      padding: 0.375rem;
-      font-size: 0.7rem;
+    .timezone-selector {
+      padding: 0.5rem;
     }
 
     .timezone-selector select {
       padding: 0.625rem;
+    }
+
+    /* Мобильные карточки для очень маленьких экранов */
+    .mobile-card {
+      padding: 0.5rem;
+    }
+
+    .mobile-card-title strong {
+      font-size: 0.85rem;
+    }
+
+    .mobile-card-product {
+      font-size: 0.75rem;
+    }
+
+    .mobile-label {
+      font-size: 0.75rem;
+      min-width: 90px;
+    }
+
+    .mobile-value {
+      font-size: 0.75rem;
+    }
+
+    .mobile-status {
+      font-size: 0.65rem;
+      padding: 0.15rem 0.3rem;
+    }
+
+    /* Еще более компактные даты */
+    .mobile-date-input {
+      padding: 0.5rem;
+    }
+
+    .mobile-filter-panel {
+      padding: 0.5rem;
     }
 
     .clear-icon {
