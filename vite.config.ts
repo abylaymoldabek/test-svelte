@@ -7,7 +7,7 @@ export default defineConfig({
 		port: 5175,
 		proxy: {
 			'/api': {
-				target: 'http://localhost:8082',
+				target: process.env.VETIS_PROXY_TARGET || 'http://localhost:8082',
 				changeOrigin: true
 			}
 		}
