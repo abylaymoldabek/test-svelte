@@ -12,7 +12,6 @@ export type Role = typeof ROLES[keyof typeof ROLES];
  * Проверяет, является ли пользователь суперадмином
  */
 export function isSuperAdmin(user: User | null): boolean {
-    console.log('User role:', user?.role);
 	return user?.role === ROLES.SUPERADMIN;
 }
 

@@ -12,7 +12,7 @@
       'new': 'Новая',
       'producing': 'Производится',
       'produced': 'Произведено', 
-      'hold': 'На холде',
+      'hold': 'Требует корректировки',
       'resumed': 'Возобновлено',
       'sending': 'Отправляется',
       'done': 'Отправлена'
@@ -27,7 +27,7 @@
       "Новая",
       "Производится", 
       "Произведено",
-      "На холде",
+      "Требует корректировки",
       "Возобновлено",
       "Отправляется",
       "Отправлена",
@@ -40,6 +40,7 @@
   }
 </script>
 
+{#if batch}
 <div class="batch-info-card">
   <div class="batch-info-header">
     <strong>Партия: {batch.party}</strong>
@@ -76,12 +77,12 @@
     <div class="flow-arrow-mini">→</div>
     <div
       class="flow-item-mini"
-      class:completed={isStepCompleted(batch, "На холде")}
-      class:active={getBatchStatus(batch) === "На холде"}
-      class:hold={getBatchStatus(batch) === "На холде"}
+      class:completed={isStepCompleted(batch, "Требует корректировки")}
+      class:active={getBatchStatus(batch) === "Требует корректировки"}
+      class:hold={getBatchStatus(batch) === "Требует корректировки"}
     >
       <div class="flow-circle-mini">3</div>
-      <span>На холде</span>
+      <span>Требует корректировки</span>
     </div>
     <div class="flow-arrow-mini">→</div>
     <div
@@ -103,6 +104,7 @@
     </div>
   </div>
 </div>
+{/if}
 
 <style>
   .batch-info-card {

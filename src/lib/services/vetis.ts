@@ -1,7 +1,7 @@
 import { writable, derived } from "svelte/store";
 import type { Batch } from "$lib/types/batch";
 
-const VETIS_API_URL = "/api/vetis/batches"; // Using local proxy to avoid CORS and mixed-content issues
+const VETIS_API_URL = "/api/v1/batches"; // Using Vite proxy
 
 export function createVetisStore() {
   const batches = writable<Batch[]>([]);
@@ -14,9 +14,12 @@ export function createVetisStore() {
     loading.set(true);
     error.set(null);
     try {
+      // Формируем тело запроса согласно API
       const body = {
-        ...filters,
-        auth_token: "eyJhbGciOiJIUzI1NiIsImp0aSI6ImhtYWNfc2VjcmV0IiwidHlwIjoiSldUIn0.eyJjb21wYW55X2lkIjoiYjU0MjBkYjgtMjhjMi00MzY3LThhMzUtNmNlYzNkZWU0ZjNhIiwiY29tcGFueV9uYW1lIjoiTWFycyBNb3Njb3ciLCJleHAiOjE3NjQzNTM3MjQsImlhdCI6MTc2MTY3NTMyNH0.LhQgTC5WybTTochB3U90UMfBn9n0_2uGLakkjXUENvE"
+        auth_token: "eyJhbGciOiJIUzI1NiIsImp0aSI6ImhtYWNfc2VjcmV0IiwidHlwIjoiSldUIn0.eyJjb21wYW55X2lkIjoiYjU0MjBkYjgtMjhjMi00MzY3LThhMzUtNmNlYzNkZWU0ZjNhIiwiY29tcGFueV9uYW1lIjoiTWFycyBNb3Njb3ciLCJleHAiOjE3NjQzNTM3MjQsImlhdCI6MTc2MTY3NTMyNH0.LhQgTC5WybTTochB3U90UMfBn9n0_2uGLakkjXUENvE",
+        product_id: filters.product || "",
+        batch_id: filters.party || "",
+        status: filters.status ? [filters.status] : []
       };
 
       const response = await fetch(VETIS_API_URL, {
@@ -60,7 +63,7 @@ export function createVetisStore() {
 
   async function sendToVetis(batchId: string) {
     try {
-      const response = await fetch(`/api/vetis/batches/${batchId}/send`, {
+      const response = await fetch(`/api/v1/batches/${batchId}/send`, {
         method: "POST",
       });
       if (!response.ok) {

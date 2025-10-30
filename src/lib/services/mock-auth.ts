@@ -16,11 +16,8 @@ function createMockJWT(user: User): string {
 	};
 
 	const payload = {
-		id: user.id,
 		email: user.email,
-		firstName: user.firstName,
-		lastName: user.lastName,
-		role: user.role || 'user',
+		role: user.role || 'admin',
 		iat: Math.floor(Date.now() / 1000),
 		exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 часа
 	};
@@ -43,13 +40,8 @@ function createMockJWT(user: User): string {
 // Мок-данные пользователей
 const mockUsers: User[] = [
 	{
-		id: '1',
 		email: 'demo@okto.ru',
-		firstName: 'Demo',
-		lastName: 'User',
 		role: 'superadmin',
-		createdAt: new Date().toISOString(),
-		updatedAt: new Date().toISOString(),
 	}
 ];
 
@@ -91,13 +83,8 @@ class MockAuthService {
 		}
 		
 		const newUser: User = {
-			id: Date.now().toString(),
 			email: credentials.email,
-			firstName: credentials.firstName,
-			lastName: credentials.lastName,
-			role: 'user', // По умолчанию обычный пользователь
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString(),
+			role: 'admin', // По умолчанию администратор
 		};
 		
 		mockUsers.push(newUser);

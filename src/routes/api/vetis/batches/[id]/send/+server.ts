@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from '@sveltejs/kit';
 
-const VETIS_API_URL = 'http://158.160.90.93:8082';
+const VETIS_API_URL = 'http://localhost:8082';
 
 export const POST: RequestHandler = async ({ params }: { params: any }) => {
   try {

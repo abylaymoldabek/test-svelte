@@ -3,7 +3,7 @@
   import BatchDetailsCard from "./BatchDetailsCard.svelte";
   import AdaptiveDateRangePicker from "./AdaptiveDateRangePicker.svelte";
   import { authStore } from "$lib/stores/auth";
-  import { isSuperAdmin } from "$lib/utils/role-guard";
+  import { isAdmin } from "$lib/utils/role-guard";
 
   export let batches: any[];
   export let filters: any;
@@ -11,8 +11,21 @@
   export let sortOrder: "asc" | "desc";
   export let selectedBatch: any;
   export let deadlineTimezone: string;
+  export let criticalPercentage: number = 5; // Значение по умолчанию
 
   let activeSearch = "";
+
+  // Доступные статусы для фильтрации
+  const availableStatuses = [
+    { value: "", label: "Все статусы" },
+    { value: "new", label: "Новая" },
+    { value: "producing", label: "Производится" },
+    { value: "produced", label: "Произведено" },
+    { value: "hold", label: "Требует корректировки" },
+    { value: "resumed", label: "Возобновлено" },
+    { value: "sending", label: "Отправляется" },
+    { value: "done", label: "Отправлена" }
+  ];
 
   // Event dispatchers
   import { createEventDispatcher } from "svelte";
@@ -28,6 +41,15 @@
 
   function openConfirmModal() {
     dispatch("openConfirm");
+  }
+
+  function clearAllFilters() {
+    filters.party = "";
+    filters.product = "";
+    filters.status = "";
+    filters.dateFrom = "";
+    filters.dateTo = "";
+    activeSearch = "";
   }
 
   // Helper functions that were in the parent component
@@ -73,7 +95,7 @@
     const diffMs = deadlineObj.getTime() - now.getTime();
 
     if (diffMs <= 0) {
-      if (status && status === "На холде") {
+      if (status && status === "hold") {
         return "Просрочено";
       }
       return "Отправлено";
@@ -94,7 +116,7 @@
     const diffHours = diffMs / (1000 * 60 * 60);
 
     if (diffMs <= 0) {
-      if (status && status.includes("Отправлена")) return "normal";
+      if (status && status.includes("done")) return "normal";
       return "overdue";
     }
     if (diffHours <= 2) return "critical";
@@ -103,7 +125,6 @@
   }
 
   function isCriticalDeviation(produced: number, vetis: number) {
-    const criticalPercentage = 5; // This should be a prop
     const deviationPercentage = Math.abs(calculatePercentage(produced, vetis));
     return deviationPercentage > criticalPercentage;
   }
@@ -123,6 +144,17 @@
   }
 </script>
 
+<!-- Кнопка очистки фильтров для десктопа -->
+<div class="desktop-filter-controls">
+  <button 
+    class="desktop-clear-filters-btn" 
+    on:click={clearAllFilters}
+    type="button"
+  >
+    🗑️ Очистить все фильтры
+  </button>
+</div>
+
 <div class="table-container">
   <table class="reports-table">
     <thead>
@@ -135,17 +167,11 @@
               tabindex="0"
               on:click={() => {
                 activeSearch = activeSearch === "party" ? "" : "party";
-                if (activeSearch !== "party") {
-                  filters.party = "";
-                }
               }}
               on:keydown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   activeSearch = activeSearch === "party" ? "" : "party";
-                  if (activeSearch !== "party") {
-                    filters.party = "";
-                  }
                 }
               }}
             >
@@ -171,17 +197,11 @@
               tabindex="0"
               on:click={() => {
                 activeSearch = activeSearch === "product" ? "" : "product";
-                if (activeSearch !== "product") {
-                  filters.product = "";
-                }
               }}
               on:keydown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   activeSearch = activeSearch === "product" ? "" : "product";
-                  if (activeSearch !== "product") {
-                    filters.product = "";
-                  }
                 }
               }}
             >
@@ -207,19 +227,11 @@
               tabindex="0"
               on:click={() => {
                 activeSearch = activeSearch === "date" ? "" : "date";
-                if (activeSearch !== "date") {
-                  filters.dateFrom = "";
-                  filters.dateTo = "";
-                }
               }}
               on:keydown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   activeSearch = activeSearch === "date" ? "" : "date";
-                  if (activeSearch !== "date") {
-                    filters.dateFrom = "";
-                    filters.dateTo = "";
-                  }
                 }
               }}
             >
@@ -273,6 +285,12 @@
             <div>ВетИС</div>
           </div>
         </th>
+        <th>
+          <div class="th-multiline">
+            <div>Не</div>
+            <div>отправленные</div>
+          </div>
+        </th>
         <th class="single-line">Разница</th>
         <th>
           <div class="th-multiline">
@@ -288,17 +306,11 @@
               tabindex="0"
               on:click={() => {
                 activeSearch = activeSearch === "status" ? "" : "status";
-                if (activeSearch !== "status") {
-                  filters.status = "";
-                }
               }}
               on:keydown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   activeSearch = activeSearch === "status" ? "" : "status";
-                  if (activeSearch !== "status") {
-                    filters.status = "";
-                  }
                 }
               }}
             >
@@ -306,12 +318,21 @@
             </div>
             {#if activeSearch === "status"}
               <div class="th-search-dropdown">
-                <input
-                  type="text"
-                  placeholder=""
+                <select
                   bind:value={filters.status}
-                  class="th-search-input"
-                />
+                  class="th-search-select"
+                >
+                  {#each availableStatuses as statusOption}
+                    <option value={statusOption.value}>{statusOption.label}</option>
+                  {/each}
+                </select>
+                <button
+                  class="clear-filters-btn"
+                  on:click={clearAllFilters}
+                  type="button"
+                >
+                  Очистить все фильтры
+                </button>
               </div>
             {/if}
           </div>
@@ -331,11 +352,12 @@
           <td>{formatDateInTimezone(batch.expiryDate, deadlineTimezone)}</td>
           <td>{batch.produced.toLocaleString()}</td>
           <td>{batch.vetis.toLocaleString()}</td>
+          <td>{(batch.produced - batch.reports_sent_count).toLocaleString()}</td>
           <td
             class:critical={isCriticalDeviation(batch.produced, batch.vetis)}
-            class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) < 0}
-            class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) > 0}
-            class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) === 0}
+            class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) > 0}
+            class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) < 0}
+            class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) === 0}
           >
             <div class="difference-display">
               {formatDifference(calculateDifference(batch.produced, batch.vetis))}
@@ -365,7 +387,7 @@
                 reportsSentCount={batch.reports_sent_count}
                 reportsAllCount={batch.reports_total_count}
               />
-              {#if batch.status === "hold" && isSuperAdmin($authStore.user)}
+              {#if batch.status === "hold" && isAdmin($authStore.user)}
                 <button class="send-btn" on:click|stopPropagation={openConfirmModal}>
                   Отправить
                 </button>
@@ -375,11 +397,21 @@
         </tr>
         {#if selectedBatch === batch}
           <tr class="batch-details">
-            <td colspan="9">
+            <td colspan="10">
               <BatchDetailsCard batch={selectedBatch} />
             </td>
           </tr>
         {/if}
+      {:else}
+        <tr class="no-data-row">
+          <td colspan="10" class="no-data-cell">
+            <div class="no-data-message">
+              <div class="no-data-icon">📦</div>
+              <h3>Нет данных для отображения</h3>
+              <p>Попробуйте изменить фильтры или проверьте подключение к серверу</p>
+            </div>
+          </td>
+        </tr>
       {/each}
     </tbody>
   </table>
@@ -410,8 +442,19 @@
       </div>
       <div class="filter-item">
         <label for="filter-status">Статус</label>
-        <input id="filter-status" type="text" bind:value={filters.status} placeholder="Поиск по статусу">
+        <select id="filter-status" bind:value={filters.status} class="filter-select">
+          {#each availableStatuses as statusOption}
+            <option value={statusOption.value}>{statusOption.label}</option>
+          {/each}
+        </select>
       </div>
+    </div>
+    
+    <!-- Кнопка очистки фильтров -->
+    <div class="filter-actions">
+      <button class="clear-all-filters-btn" on:click={clearAllFilters} type="button">
+        Очистить все фильтры
+      </button>
     </div>
   </div>
 
@@ -440,7 +483,7 @@
               reportsAllCount={batch.reports_total_count}
             />
           </div>
-          {#if batch.status === "hold" && isSuperAdmin($authStore.user)}
+          {#if batch.status === "hold" && isAdmin($authStore.user)}
             <button class="card-send-btn" on:click|stopPropagation={openConfirmModal}>
               Отправить
             </button>
@@ -475,6 +518,10 @@
               <span class="field-label">Данные ВетИС:</span>
               <span class="field-value">{batch.vetis.toLocaleString()}</span>
             </div>
+            <div class="card-field">
+              <span class="field-label">Не отправленные:</span>
+              <span class="field-value">{(batch.produced - batch.reports_sent_count).toLocaleString()}</span>
+            </div>
           </div>
 
           <div class="card-row">
@@ -483,9 +530,9 @@
               <span 
                 class="field-value difference-value"
                 class:critical={isCriticalDeviation(batch.produced, batch.vetis)}
-                class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) < 0}
-                class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) > 0}
-                class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) === 0}
+                class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) > 0}
+                class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) < 0}
+                class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) === 0}
               >
                 {formatDifference(calculateDifference(batch.produced, batch.vetis))}
                 ({calculatePercentage(batch.produced, batch.vetis)}%)
@@ -512,6 +559,14 @@
             <BatchDetailsCard batch={selectedBatch} />
           </div>
         {/if}
+      </div>
+    {:else}
+      <div class="no-data-card">
+        <div class="no-data-message">
+          <div class="no-data-icon">📦</div>
+          <h3>Нет данных для отображения</h3>
+          <p>Попробуйте изменить фильтры или проверьте подключение к серверу</p>
+        </div>
       </div>
     {/each}
   </div>
@@ -642,17 +697,27 @@
     display: flex;
     align-items: center;
     width: 100%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0.25rem;
+    border-radius: 6px;
   }
 
-  .reports-table th:nth-child(1) { width: 9%; }
-  .reports-table th:nth-child(2) { width: 9%; }
-  .reports-table th:nth-child(3) { width: 12%; }
-  .reports-table th:nth-child(4) { width: 12%; }
-  .reports-table th:nth-child(5) { width: 9%; }
-  .reports-table th:nth-child(6) { width: 9%; }
+  .th-title:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .reports-table th:nth-child(1) { width: 8%; }
+  .reports-table th:nth-child(2) { width: 8%; }
+  .reports-table th:nth-child(3) { width: 10%; }
+  .reports-table th:nth-child(4) { width: 10%; }
+  .reports-table th:nth-child(5) { width: 8%; }
+  .reports-table th:nth-child(6) { width: 8%; }
   .reports-table th:nth-child(7) { width: 9%; }
-  .reports-table th:nth-child(8) { width: 12%; }
-  .reports-table th:nth-child(9) { width: 19%; }
+  .reports-table th:nth-child(8) { width: 8%; }
+  .reports-table th:nth-child(9) { width: 10%; }
+  .reports-table th:nth-child(10) { width: 21%; }
 
   .reports-table th:first-child { border-top-left-radius: 12px; }
   .reports-table th:last-child { border-top-right-radius: 12px; }
@@ -702,6 +767,16 @@
     word-wrap: break-word;
   }
 
+  /* Уменьшенный шрифт для числовых колонок */
+  .reports-table td:nth-child(5),  /* Произведено */
+  .reports-table td:nth-child(6),  /* Данные ВетИС */
+  .reports-table td:nth-child(7),  /* Не отправленные */
+  .reports-table td:nth-child(8) { /* Разница */
+    font-size: 0.65rem !important;
+    font-weight: 600;
+    text-align: center;
+  }
+
   .reports-table tbody tr:hover {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
     transform: translateY(-1px);
@@ -717,12 +792,12 @@
     border-left: 3px solid #3b82f6;
   }
 
-  .positive { color: #059669; font-weight: 600; }
-  .negative { color: #dc2626; font-weight: 600; }
-  .neutral { color: #6b7280; font-weight: 600; }
+  .positive { color: #059669 !important; font-weight: 600; }
+  .negative { color: #7b26dc !important; font-weight: 600; }
+  .neutral { color: #6b7280 !important; font-weight: 600; }
   .critical {
-    color: #dc2626;
-    background-color: #fef2f2;
+    color: #dc2626 !important;
+    background-color: #fef2f2 !important;
     font-weight: 700;
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
@@ -761,6 +836,62 @@
     padding: 0;
   }
 
+  /* Стили для сообщения "Нет данных" */
+  .no-data-row {
+    background: white;
+  }
+
+  .no-data-row:hover {
+    background: white !important;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .no-data-cell {
+    padding: 3rem 2rem !important;
+    text-align: center !important;
+    border-bottom: none !important;
+  }
+
+  .no-data-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .no-data-icon {
+    font-size: 3rem;
+    opacity: 0.6;
+  }
+
+  .no-data-message h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .no-data-message p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #6b7280;
+    line-height: 1.5;
+  }
+
+  /* Стили для карточки "Нет данных" в планшетной версии */
+  .no-data-card {
+    background: white;
+    border-radius: 12px;
+    padding: 3rem 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 2px solid #f1f5f9;
+    text-align: center;
+    grid-column: 1 / -1; /* Занимает всю ширину грида */
+  }
+
   .th-search-input {
     padding: 0.625rem 0.25rem 0.5rem 2rem;
     border: 2px solid #e2e8f0;
@@ -770,6 +901,70 @@
     outline: none;
     background: #f8fafc url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'/%3e%3c/svg%3e") no-repeat left 0.5rem center;
     background-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .th-search-input:hover {
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+    cursor: text;
+  }
+
+  .th-search-input:focus {
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    cursor: text;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .th-search-select {
+    padding: 0.625rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    width: 100%;
+    outline: none;
+    background: #f8fafc;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+  }
+
+  .th-search-select:hover {
+    border-color: #cbd5e1;
+    background-color: #ffffff;
+  }
+
+  .th-search-select:focus {
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .clear-filters-btn {
+    width: 100%;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 0.75rem;
+  }
+
+  .clear-filters-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
   }
 
   .th-search-dropdown {
@@ -857,6 +1052,56 @@
     display: none;
   }
 
+  /* Стили для кнопки очистки фильтров на десктопе */
+  .desktop-filter-controls {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+    padding: 0 0.25rem;
+  }
+
+  .desktop-clear-filters-btn {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 1px 3px -1px rgba(239, 68, 68, 0.25), 0 1px 2px -1px rgba(239, 68, 68, 0.1);
+  }
+
+  .desktop-clear-filters-btn:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-0.5px);
+    box-shadow: 0 2px 6px -1px rgba(239, 68, 68, 0.35), 0 1px 3px -1px rgba(239, 68, 68, 0.15);
+  }
+
+  .desktop-clear-filters-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px -1px rgba(239, 68, 68, 0.3);
+  }
+
+  /* Медиа-запросы для адаптивности */
+  @media (max-width: 1024px) {
+    .desktop-filter-controls {
+      display: none;
+    }
+    
+    .table-container {
+      display: none;
+    }
+    
+    .tablet-card-view {
+      display: block;
+    }
+  }
+
   /* Стили для карточной версии */
   .tablet-filters {
     background: white;
@@ -882,6 +1127,12 @@
     font-weight: 600;
     font-size: 0.875rem;
     color: #374151;
+    cursor: pointer;
+    transition: color 0.2s ease;
+  }
+
+  .filter-item label:hover {
+    color: #3b82f6;
   }
 
   .filter-item input {
@@ -889,12 +1140,79 @@
     border: 2px solid #e5e7eb;
     border-radius: 8px;
     font-size: 0.875rem;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+
+  .filter-item input:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+    cursor: text;
   }
 
   .filter-item input:focus {
     outline: none;
     border-color: #3b82f6;
+    background-color: #ffffff;
+    cursor: text;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-select {
+    padding: 0.75rem;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: white;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.5' d='M19 9l-7 7-7-7'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+    padding-right: 2.5rem;
+  }
+
+  .filter-select:hover {
+    border-color: #cbd5e1;
+    background-color: #f8fafc;
+  }
+
+  .filter-select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  .filter-actions {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .clear-all-filters-btn {
+    width: 100%;
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .clear-all-filters-btn:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
   }
 
   /* Стили для адаптивного календаря в планшетных фильтрах */
@@ -1052,12 +1370,12 @@
     color: #1f2937;
   }
 
-  .difference-value.positive { color: #059669; }
-  .difference-value.negative { color: #dc2626; }
-  .difference-value.neutral { color: #6b7280; }
+  .difference-value.positive { color: #059669 !important; }
+  .difference-value.negative { color: #6c26dc !important; }
+  .difference-value.neutral { color: #6b7280 !important; }
   .difference-value.critical {
-    color: #dc2626;
-    background-color: #fef2f2;
+    color: #dc2626 !important;
+    background-color: #fef2f2 !important;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-weight: 700;
@@ -1247,7 +1565,7 @@
     }
     
     .difference-value.negative { 
-      color: #dc2626; 
+      color: #4e26dc; 
       font-weight: 600;
     }
     

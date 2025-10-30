@@ -182,13 +182,8 @@ class AuthService {
 
 		// Преобразуем payload в объект User
 		return {
-			id: payload.id || payload.user_id || '',
 			email: payload.email || '',
-			firstName: payload.firstName || payload.first_name || '',
-			lastName: payload.lastName || payload.last_name || '',
-			role: payload.role || 'user',
-			createdAt: payload.createdAt || payload.created_at || new Date().toISOString(),
-			updatedAt: payload.updatedAt || payload.updated_at || new Date().toISOString(),
+			role: payload.role || 'admin',
 		};
 	}
 

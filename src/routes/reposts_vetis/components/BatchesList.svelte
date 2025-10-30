@@ -2,11 +2,12 @@
   import VetisStatusBadge from "./VetisStatusBadge.svelte";
   import BatchDetailsCard from "./BatchDetailsCard.svelte";
   import { authStore } from "$lib/stores/auth";
-  import { isSuperAdmin } from "$lib/utils/role-guard";
+  import { isAdmin } from "$lib/utils/role-guard";
 
   export let batches: any[];
   export let selectedBatch: any;
   export let deadlineTimezone: string;
+  export let criticalPercentage: number = 5; // Значение по умолчанию
 
   // Event dispatchers
   import { createEventDispatcher } from "svelte";
@@ -55,7 +56,6 @@
 
   // Функции для расчета разности
   function isCriticalDeviation(produced: number, vetis: number) {
-    const criticalPercentage = 5;
     const deviationPercentage = Math.abs(calculatePercentage(produced, vetis));
     return deviationPercentage > criticalPercentage;
   }
@@ -75,14 +75,14 @@
   }
 
   // Helper functions
-  function getTimeUntilDeadline(deadline: string, status: string = "") {
+  function getTimeUntilDeadline(deadline: string, status: string) {
     if (!deadline) return "";
     const now = new Date();
     const deadlineObj = new Date(deadline);
     const diffMs = deadlineObj.getTime() - now.getTime();
 
     if (diffMs <= 0) {
-      if (status && status === "На холде") {
+      if (status && status === "hold") {
         return "Просрочено";
       }
       return "Отправлено";
@@ -103,7 +103,7 @@
     const diffHours = diffMs / (1000 * 60 * 60);
 
     if (diffMs <= 0) {
-      if (status && status.includes("Отправлена")) return "normal";
+      if (status && status.includes("done")) return "normal";
       return "overdue";
     }
     if (diffHours <= 2) return "critical";
@@ -149,13 +149,17 @@
           <span class="value">{batch.vetis.toLocaleString()}</span>
         </div>
         <div class="info-row">
+          <span class="label">Не отправленные:</span>
+          <span class="value">{(batch.produced - batch.reports_sent_count).toLocaleString()}</span>
+        </div>
+        <div class="info-row">
           <span class="label">Разница:</span>
           <span 
             class="value difference-value"
             class:critical={isCriticalDeviation(batch.produced, batch.vetis)}
-            class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) < 0}
-            class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) > 0}
-            class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) === 0}
+            class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) < 0}
+            class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) > 0}
+            class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculateDifference(batch.produced, batch.vetis) === 0}
           >
             {formatDifference(calculateDifference(batch.produced, batch.vetis))}
             ({calculatePercentage(batch.produced, batch.vetis)}%)
@@ -183,14 +187,14 @@
             reportsAllCount={batch.reportsAllCount}
           />
         </div>
-        {#if batch.status === "На холде" && isSuperAdmin($authStore.user)}
+        {#if batch.status === "hold" && isAdmin($authStore.user)}
           <button class="send-btn-mobile" on:click|stopPropagation={openConfirmModal}>
             Отправить
           </button>
         {/if}
       </div>
 
-      {#if selectedBatch === batch}
+      {#if selectedBatch === batch && selectedBatch}
         <div class="details-container-mobile">
           <BatchDetailsCard batch={selectedBatch} />
         </div>
@@ -287,7 +291,7 @@
     font-weight: 600;
   }
   .difference-value.negative { 
-    color: #dc2626; 
+    color: #5426dc; 
     font-weight: 600;
   }
   .difference-value.neutral { 

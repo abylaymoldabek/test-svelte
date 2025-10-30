@@ -4,17 +4,18 @@
   import { useAuthGuard } from "$lib/utils/auth-guard.js";
   import { authStore } from "$lib/stores/auth";
   import { isAdmin } from "$lib/utils/role-guard";
+  import { authService } from "$lib/services/auth";
 
   let authGuard: {
     isAuthorized: boolean;
     cleanup: () => void;
     checkAuth: () => Promise<boolean>;
   } | null = null;
-  let companyName = "OKTO";
-  let expirationDate = "27 марта, 2024";
-  let timezone = "(GMT+03:00) Moscow";
-  let industry = "Молочная промышленность";
-  let gln = "000011112";
+  let companyName = "";
+  let expirationDate = "";
+  let timezone = "";
+  let industry = "";
+  let gln = "";
   let linePrefix = "";
   let palletLabels = 1;
   let boxLabels = 1;
@@ -37,29 +38,22 @@
   let forcedDryDays = 15;
   let forcedWetDays = 15;
 
+  let loading = false;
+  let notification = { show: false, type: 'success', message: '' };
+
   onMount(() => {
     // Initialize auth guard
     authGuard = useAuthGuard("/settings");
-    
-    // Загружаем сохраненные настройки ВетИС
-    loadVetisSettings();
+
+    // Загружаем настройки с бэка
+    fetchCompanySettings();
   });
 
-  // Функция для загрузки настроек ВетИС
-  function loadVetisSettings() {
-    try {
-      const savedSettings = localStorage.getItem('vetisSettings');
-      if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        criticalPercentage = settings.criticalPercentage || 5;
-        delayedDryDays = settings.delayedDryDays || 15;
-        delayedWetDays = settings.delayedWetDays || 15;
-        forcedDryDays = settings.forcedDryDays || 15;
-        forcedWetDays = settings.forcedWetDays || 15;
-      }
-    } catch (error) {
-      console.error("Ошибка загрузки настроек ВетИС:", error);
-    }
+  function showNotification(type: 'success' | 'error', message: string) {
+    notification = { show: true, type, message };
+    setTimeout(() => {
+      notification = { show: false, type: 'success', message: '' };
+    }, 4000);
   }
 
   onDestroy(() => {
@@ -68,36 +62,143 @@
     }
   });
 
-  function saveSettings() {
+  // Получаем company_id из хранилища токена (safely)
+  function getCompanyIdFromToken(): string | null {
     try {
-      // Сохраняем настройки ВетИС
-      const vetisSettings = {
-        criticalPercentage,
-        delayedDryDays,
-        delayedWetDays,
-        forcedDryDays,
-        forcedWetDays
+      // Сначала пробуем взять из authService helper
+      const cid = authService.getCompanyId();
+      if (cid) return cid;
+      // fallback: try read from tokenPayload store directly
+      let payloadValue: any = null;
+      tokenPayload.subscribe((v) => (payloadValue = v))();
+      return payloadValue?.company_id || null;
+    } catch (err) {
+      console.error('getCompanyIdFromToken error', err);
+      return null;
+    }
+  }
+
+  async function fetchCompanySettings() {
+    const companyId = getCompanyIdFromToken();
+    if (!companyId) {
+      console.warn('Company id not found in token, skipping fetch');
+      return;
+    }
+
+    loading = true;
+    try {
+      // Use relative /api path so dev proxy (vite) or SvelteKit proxy can handle it
+      const url = `/api/v1/companies/${companyId}`;
+      const token = authService.getStoredToken();
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        }
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to fetch company: ${res.status} ${text}`);
+      }
+
+      const data = await res.json();
+
+      // Map response to local fields
+      companyName = data.name || companyName;
+      timezone = data.time_zone || timezone;
+      // Vetis settings
+      criticalPercentage = data.vetis_critical_discrepancy_percent ?? criticalPercentage;
+      delayedDryDays = data.deferred_reports_dry_percent ?? delayedDryDays;
+      delayedWetDays = data.deferred_reports_wet_percent ?? delayedWetDays;
+      forcedDryDays = data.forced_reports_dry_percent ?? forcedDryDays;
+      forcedWetDays = data.forced_reports_wet_percent ?? forcedWetDays;
+
+    } catch (err: any) {
+      console.error('fetchCompanySettings error', err);
+      showNotification('error', 'Ошибка загрузки настроек: ' + (err?.message || 'неизвестная ошибка'));
+    } finally {
+      loading = false;
+    }
+  }
+
+  // Сохраняем настройки на сервер (PUT)
+  async function saveSettings() {
+    try {
+      const companyId = getCompanyIdFromToken();
+      if (!companyId) {
+        showNotification('error', 'Company ID не найден в токене');
+        return;
+      }
+
+      const url = `/api/v1/companies/6fbfb1e0-64d6-4ab3-ba64-9cfe5fb699e5`;
+      const token = authService.getStoredToken();
+
+      const payload = {
+        name: companyName,
+        time_zone: timezone || '',
+        // created_at: keep same as before if available — backend usually ignores this when updating
+        updated_at: new Date().toISOString(),
+        vetis_critical_discrepancy_percent: Number(criticalPercentage),
+        deferred_reports_dry_percent: Number(delayedDryDays),
+        deferred_reports_wet_percent: Number(delayedWetDays),
+        forced_reports_dry_percent: Number(forcedDryDays),
+        forced_reports_wet_percent: Number(forcedWetDays)
       };
-      
-      // Сохраняем в localStorage (позже можно заменить на API)
-      localStorage.setItem('vetisSettings', JSON.stringify(vetisSettings));
-      
-      // TODO: Отправить настройки на сервер
-      // await fetch('/api/v1/company/settings', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ vetisSettings })
-      // });
-      
-      alert("Настройки успешно сохранены!");
-    } catch (error) {
-      console.error("Ошибка сохранения настроек:", error);
-      alert("Ошибка при сохранении настроек");
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to save company: ${res.status} ${text}`);
+      }
+
+      const data = await res.json();
+
+      // Update local fields with server response
+      companyName = data.name || companyName;
+      timezone = data.time_zone || timezone;
+      criticalPercentage = data.vetis_critical_discrepancy_percent ?? criticalPercentage;
+      delayedDryDays = data.deferred_reports_dry_percent ?? delayedDryDays;
+      delayedWetDays = data.deferred_reports_wet_percent ?? delayedWetDays;
+      forcedDryDays = data.forced_reports_dry_percent ?? forcedDryDays;
+      forcedWetDays = data.forced_reports_wet_percent ?? forcedWetDays;
+
+      showNotification('success', 'Настройки успешно сохранены!');
+    } catch (err: any) {
+      console.error('saveSettings error', err);
+      showNotification('error', 'Ошибка при сохранении настроек: ' + (err?.message || 'неизвестная ошибка'));
     }
   }
 </script>
 
 {#if $tokenPayload}
+  <!-- Notification Component -->
+  {#if notification.show}
+    <div class="notification notification-{notification.type}">
+      <div class="notification-content">
+        <div class="notification-icon">
+          {#if notification.type === 'success'}
+            ✓
+          {:else}
+            ⚠
+          {/if}
+        </div>
+        <span class="notification-message">{notification.message}</span>
+        <button class="notification-close" on:click={() => notification.show = false}>×</button>
+      </div>
+    </div>
+  {/if}
+
   <div class="settings-page">
     <!-- <div class="expiration-info">
       <span class="expiration-label">Дата истечения плана</span>
@@ -115,21 +216,21 @@
             <input type="text" id="company-name" bind:value={companyName} />
           </div>
 
-          <div class="form-group">
+          <!-- <div class="form-group">
             <label for="timezone">Часовой пояс</label>
             <select id="timezone" bind:value={timezone}>
               <option value="(GMT+03:00) Moscow">(GMT+03:00) Moscow</option>
             </select>
-          </div>
+          </div> -->
 
-          <div class="form-group">
+          <!-- <div class="form-group">
             <label for="industry">Товарная группа</label>
             <select id="industry" bind:value={industry}>
               <option value="Молочная промышленность"
                 >Молочная промышленность</option
               >
             </select>
-          </div>
+          </div> -->
         </div>
       </section>
 
@@ -255,7 +356,6 @@
           <button class="reset-color">Цвет по умолчанию</button>
         </div>
       </section> -->
-
       <section class="settings-vetis">
         <h2>Настройки ВетИС</h2>
         <div class="form-grid">
@@ -274,7 +374,7 @@
           </div>
 
           <div class="form-group">
-            <label for="delayed-dry">Отложенные отчеты DRY (дни)</label>
+            <label for="delayed-dry">Отложенные отчеты DRY (%)</label>
             <input
               type="number"
               id="delayed-dry"
@@ -285,7 +385,7 @@
           </div>
 
           <div class="form-group">
-            <label for="delayed-wet">Отложенные отчеты WET (дни)</label>
+            <label for="delayed-wet">Отложенные отчеты WET (%)</label>
             <input
               type="number"
               id="delayed-wet"
@@ -297,7 +397,7 @@
 
           <div class="form-group">
             <label for="forced-dry"
-              >Принудительная отправка отчетов DRY (дни)</label
+              >Принудительная отправка отчетов DRY (%)</label
             >
             <input
               type="number"
@@ -310,7 +410,7 @@
 
           <div class="form-group">
             <label for="forced-wet"
-              >Принудительная отправка отчетов WET (дни)</label
+              >Принудительная отправка отчетов WET (%)</label
             >
             <input
               type="number"
@@ -327,10 +427,6 @@
     <div class="form-actions">
       {#if isAdmin($authStore.user)}
         <button class="save-button" on:click={saveSettings}>Сохранить</button>
-      {:else}
-        <div class="access-denied">
-          <p>Только администраторы могут сохранять настройки</p>
-        </div>
       {/if}
     </div>
   </div>
@@ -934,6 +1030,89 @@
 
     .settings-grid {
       gap: 1rem;
+    }
+  }
+
+  /* Notification Styles */
+  .notification {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 1000;
+    min-width: 320px;
+    max-width: 500px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(10px);
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .notification-success {
+    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    border-left: 4px solid #15803d;
+  }
+
+  .notification-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-left: 4px solid #b91c1c;
+  }
+
+  .notification-content {
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    color: white;
+  }
+
+  .notification-icon {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+
+  .notification-message {
+    flex: 1;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .notification-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 0.75rem;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .notification-close:hover {
+    opacity: 1;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Mobile notification adjustments */
+  @media (max-width: 768px) {
+    .notification {
+      top: 1rem;
+      right: 1rem;
+      left: 1rem;
+      min-width: auto;
+      max-width: none;
     }
   }
 </style>

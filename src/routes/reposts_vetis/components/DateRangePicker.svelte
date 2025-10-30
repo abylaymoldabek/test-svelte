@@ -154,11 +154,9 @@
   $: {
     if (dateFrom && (!selectedStart || formatDateValue(selectedStart) !== dateFrom)) {
       selectedStart = createDateFromString(dateFrom);
-      console.log('Setting selectedStart:', selectedStart, 'from dateFrom:', dateFrom);
     }
     if (dateTo && (!selectedEnd || formatDateValue(selectedEnd) !== dateTo)) {
       selectedEnd = createDateFromString(dateTo);
-      console.log('Setting selectedEnd:', selectedEnd, 'from dateTo:', dateTo);
     }
     if (!dateFrom && selectedStart) {
       selectedStart = null;

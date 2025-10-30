@@ -32,7 +32,6 @@ class HttpClient {
 		
 		// Если получили 401, пытаемся обновить токен
 		if (response.status === 401) {
-			console.log('Received 401, attempting token refresh...');
 			
 			const newToken = await authService.refreshToken();
 			if (newToken) {
