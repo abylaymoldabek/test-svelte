@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { env } from '$env/dynamic/private';
 
-const VETIS_API_URL = env.VETIS_API_URL || 'http://158.160.90.93:8082/';
+const VETIS_API_URL = 'http://158.160.90.93:8082';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
