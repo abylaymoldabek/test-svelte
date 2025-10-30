@@ -767,16 +767,6 @@
     word-wrap: break-word;
   }
 
-  /* Уменьшенный шрифт для числовых колонок */
-  .reports-table td:nth-child(5),  /* Произведено */
-  .reports-table td:nth-child(6),  /* Данные ВетИС */
-  .reports-table td:nth-child(7),  /* Не отправленные */
-  .reports-table td:nth-child(8) { /* Разница */
-    font-size: 0.65rem !important;
-    font-weight: 600;
-    text-align: center;
-  }
-
   .reports-table tbody tr:hover {
     background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
     transform: translateY(-1px);

@@ -1,7 +1,7 @@
 import { writable, derived } from "svelte/store";
 import type { Batch } from "$lib/types/batch";
 
-const VETIS_API_URL = "/api/v1/batches"; // Using Vite proxy
+const VETIS_API_URL = "/api/vetis/batches"; // Using Vite proxy
 
 export function createVetisStore() {
   const batches = writable<Batch[]>([]);
@@ -63,7 +63,7 @@ export function createVetisStore() {
 
   async function sendToVetis(batchId: string) {
     try {
-      const response = await fetch(`/api/v1/batches/${batchId}/send`, {
+      const response = await fetch(`/api/vetis/batches/${batchId}/send`, {
         method: "POST",
       });
       if (!response.ok) {
