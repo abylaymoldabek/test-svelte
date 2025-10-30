@@ -1,7 +1,7 @@
 import { writable, derived } from "svelte/store";
 import type { Batch } from "$lib/types/batch";
 
-const VETIS_API_URL = "http://158.160.90.93:8082/api/v1/batches"; // Direct API endpoint
+const VETIS_API_URL = "/api/vetis/batches"; // Using local proxy to avoid CORS and mixed-content issues
 
 export function createVetisStore() {
   const batches = writable<Batch[]>([]);
@@ -60,7 +60,7 @@ export function createVetisStore() {
 
   async function sendToVetis(batchId: string) {
     try {
-      const response = await fetch(`${VETIS_API_URL}/${batchId}/send`, {
+      const response = await fetch(`/api/vetis/batches/${batchId}/send`, {
         method: "POST",
       });
       if (!response.ok) {
