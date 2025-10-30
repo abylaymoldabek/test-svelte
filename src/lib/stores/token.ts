@@ -18,14 +18,7 @@ export const tokenPayload = writable<TokenPayload | null>(null);
 export const isAuthenticated = derived(
 	tokenPayload,
 	($payload) => {
-		console.log('Checking if user is authenticated with payload:', $payload);
 		const result = $payload !== null && !isTokenExpired($payload);
-		console.log('isAuthenticated derived store update:', {
-			payload: $payload,
-			isNull: $payload === null,
-			isExpired: $payload ? isTokenExpired($payload) : 'N/A',
-			result: result
-		});
 		return result;
 	}
 );
@@ -44,22 +37,11 @@ export const userId = derived(
 
 // Функция для проверки истечения токена
 function isTokenExpired(payload: TokenPayload | null): boolean {
-	console.log('Checking if token is expired with payload:', payload);
 	if (!payload?.exp) {
-		console.log('Token has no exp field:', payload);
 		return true;
 	}
-	
 	const currentTime = Math.floor(Date.now() / 1000);
 	const isExpired = payload.exp < currentTime;
-	
-	console.log('Token expiration check in store:', {
-		exp: payload.exp,
-		currentTime: currentTime,
-		isExpired: isExpired,
-		expiryDate: new Date(payload.exp * 1000).toLocaleString()
-	});
-	
 	return isExpired;
 }
 
@@ -78,7 +60,6 @@ export function initializeTokenPayload() {
 		// Слушаем изменения в localStorage для автоматического обновления
 		const handleStorageChange = (event: StorageEvent) => {
 			if (event.key === 'token_payload' || event.key === 'auth_token') {
-				console.log('Storage change detected:', event.key, event.newValue);
 				
 				// Обновляем payload из localStorage
 				const updatedPayload = authService.getStoredPayload();
@@ -116,10 +97,8 @@ export function refreshTokenPayload() {
 	const payload = authService.getStoredPayload();
 	if (payload && !isTokenExpired(payload)) {
 		tokenPayload.set(payload);
-		console.log('Token payload refreshed from localStorage:', payload);
 	} else {
 		tokenPayload.set(null);
-		console.log('Token payload cleared (invalid or expired)');
 	}
 }
 

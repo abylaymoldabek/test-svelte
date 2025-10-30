@@ -6,6 +6,40 @@ import type {
 	User 
 } from '../types/auth.js';
 
+/**
+ * Создает простой мок JWT токен для тестирования
+ */
+function createMockJWT(user: User): string {
+	const header = {
+		alg: 'HS256',
+		typ: 'JWT'
+	};
+
+	const payload = {
+		id: user.id,
+		email: user.email,
+		firstName: user.firstName,
+		lastName: user.lastName,
+		role: user.role || 'user',
+		iat: Math.floor(Date.now() / 1000),
+		exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 часа
+	};
+
+	// Простое base64url кодирование для мока
+	const encodeBase64Url = (obj: any) => {
+		return btoa(JSON.stringify(obj))
+			.replace(/=/g, '')
+			.replace(/\+/g, '-')
+			.replace(/\//g, '_');
+	};
+
+	const encodedHeader = encodeBase64Url(header);
+	const encodedPayload = encodeBase64Url(payload);
+	const signature = 'mock_signature'; // В реальности здесь была бы подпись
+
+	return `${encodedHeader}.${encodedPayload}.${signature}`;
+}
+
 // Мок-данные пользователей
 const mockUsers: User[] = [
 	{
@@ -13,6 +47,7 @@ const mockUsers: User[] = [
 		email: 'demo@okto.ru',
 		firstName: 'Demo',
 		lastName: 'User',
+		role: 'superadmin',
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
 	}
@@ -30,13 +65,14 @@ class MockAuthService {
 				email: credentials.email,
 				firstName: 'Demo',
 				lastName: 'User',
+				role: 'superadmin',
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString(),
 			};
 			
 			return {
 				user,
-				token: 'mock_jwt_token_' + Date.now(),
+				token: createMockJWT(user),
 				refreshToken: 'mock_refresh_token_' + Date.now(),
 			};
 		}
@@ -59,6 +95,7 @@ class MockAuthService {
 			email: credentials.email,
 			firstName: credentials.firstName,
 			lastName: credentials.lastName,
+			role: 'user', // По умолчанию обычный пользователь
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 		};
@@ -67,7 +104,7 @@ class MockAuthService {
 		
 		return {
 			user: newUser,
-			token: 'mock_jwt_token_' + Date.now(),
+			token: createMockJWT(newUser),
 			refreshToken: 'mock_refresh_token_' + Date.now(),
 		};
 	}

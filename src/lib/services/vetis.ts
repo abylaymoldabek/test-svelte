@@ -31,7 +31,6 @@ export function createVetisStore() {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const apiResponse = await response.json();
-      console.log('API Response:', apiResponse); // Для отладки
       
       // Преобразуем данные API в формат, ожидаемый компонентом
       const transformedBatches = apiResponse.items ? apiResponse.items.map((apiBatch: any) => ({

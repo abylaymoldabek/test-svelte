@@ -47,9 +47,7 @@
 
   $: shouldShowCounter = (displayStatus === "Отправляется" || displayStatus === "Отправлена") && (reportsAllCount > 0 || reportsSentCount > 0);
 
-  // Добавим отладочную информацию
-  $: console.log('VetisStatusBadge:', { status, displayStatus, reportsSentCount, reportsAllCount, shouldShowCounter });
-
+  
   $: statusClasses = {
     new: displayStatus === "Новая",
     producing: displayStatus === "Производится",

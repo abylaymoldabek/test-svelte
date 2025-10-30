@@ -1,6 +1,8 @@
 <script lang="ts">
   import VetisStatusBadge from "./VetisStatusBadge.svelte";
   import BatchDetailsCard from "./BatchDetailsCard.svelte";
+  import { authStore } from "$lib/stores/auth";
+  import { isSuperAdmin } from "$lib/utils/role-guard";
 
   export let batches: any[];
   export let selectedBatch: any;
@@ -16,6 +18,60 @@
 
   function openConfirmModal() {
     dispatch("openConfirm");
+  }
+
+  // Helper functions for date formatting
+  function formatDateInTimezone(date: string, timezone: string) {
+    if (!date) return "";
+    try {
+      const dateObj = new Date(date);
+      return new Intl.DateTimeFormat("ru-RU", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(dateObj);
+    } catch (error) {
+      return date; // Fallback
+    }
+  }
+
+  function formatDeadlineInTimezone(deadline: string, timezone: string) {
+    if (!deadline) return "";
+    try {
+      const deadlineObj = new Date(deadline);
+      return new Intl.DateTimeFormat("ru-RU", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(deadlineObj);
+    } catch (error) {
+      return deadline;
+    }
+  }
+
+  // Функции для расчета разности
+  function isCriticalDeviation(produced: number, vetis: number) {
+    const criticalPercentage = 5;
+    const deviationPercentage = Math.abs(calculatePercentage(produced, vetis));
+    return deviationPercentage > criticalPercentage;
+  }
+
+  function calculatePercentage(produced: number, vetis: number) {
+    if (vetis === 0) return 0;
+    return Math.round(((vetis - produced) / vetis) * 100);
+  }
+
+  function calculateDifference(produced: number, vetis: number) {
+    return produced - vetis;
+  }
+
+  function formatDifference(difference: number) {
+    const sign = difference > 0 ? "+" : "";
+    return sign + difference.toLocaleString();
   }
 
   // Helper functions
@@ -54,23 +110,6 @@
     if (diffHours <= 24) return "warning";
     return "normal";
   }
-
-  function formatDeadlineInTimezone(deadline: string, timezone: string) {
-    if (!deadline) return "";
-    try {
-      const deadlineObj = new Date(deadline);
-      return new Intl.DateTimeFormat("ru-RU", {
-        timeZone: timezone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(deadlineObj);
-    } catch (error) {
-      return deadline;
-    }
-  }
 </script>
 
 <div class="cards-container">
@@ -94,6 +133,14 @@
       </div>
       <div class="card-body">
         <div class="info-row">
+          <span class="label">Дата производства:</span>
+          <span class="value">{formatDateInTimezone(batch.productionDate, deadlineTimezone)}</span>
+        </div>
+        <div class="info-row">
+          <span class="label">Срок годности:</span>
+          <span class="value">{formatDateInTimezone(batch.expiryDate, deadlineTimezone)}</span>
+        </div>
+        <div class="info-row">
           <span class="label">Произведено:</span>
           <span class="value">{batch.produced.toLocaleString()}</span>
         </div>
@@ -102,25 +149,41 @@
           <span class="value">{batch.vetis.toLocaleString()}</span>
         </div>
         <div class="info-row">
+          <span class="label">Разница:</span>
+          <span 
+            class="value difference-value"
+            class:critical={isCriticalDeviation(batch.produced, batch.vetis)}
+            class:positive={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) < 0}
+            class:negative={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) > 0}
+            class:neutral={!isCriticalDeviation(batch.produced, batch.vetis) && calculatePercentage(batch.produced, batch.vetis) === 0}
+          >
+            {formatDifference(calculateDifference(batch.produced, batch.vetis))}
+            ({calculatePercentage(batch.produced, batch.vetis)}%)
+          </span>
+        </div>
+        <div class="info-row">
           <span class="label">До отправки:</span>
           <span
             class="value deadline-value"
-            class:deadline-overdue={getDeadlineStatus(batch.deadline, batch.status) === "overdue"}
-            class:deadline-critical={getDeadlineStatus(batch.deadline, batch.status) === "critical"}
-            class:deadline-warning={getDeadlineStatus(batch.deadline, batch.status) === "warning"}
+            class:deadline-overdue={getDeadlineStatus(batch.sent_at, batch.status) === "overdue"}
+            class:deadline-critical={getDeadlineStatus(batch.sent_at, batch.status) === "critical"}
+            class:deadline-warning={getDeadlineStatus(batch.sent_at, batch.status) === "warning"}
           >
-            {getTimeUntilDeadline(batch.deadline, batch.status)}
-            <small>{formatDeadlineInTimezone(batch.deadline, deadlineTimezone)}</small>
+            {getTimeUntilDeadline(batch.sent_at, batch.status)}
+            <small>{formatDeadlineInTimezone(batch.sent_at, deadlineTimezone)}</small>
           </span>
         </div>
       </div>
       <div class="card-footer">
-        <VetisStatusBadge 
-          status={batch.status} 
-          reportsSentCount={batch.reportsSentCount}
-          reportsAllCount={batch.reportsAllCount}
-        />
-        {#if batch.status === "На холде"}
+        <div class="status-section">
+          <span class="status-label">Статус:</span>
+          <VetisStatusBadge 
+            status={batch.status} 
+            reportsSentCount={batch.reportsSentCount}
+            reportsAllCount={batch.reportsAllCount}
+          />
+        </div>
+        {#if batch.status === "На холде" && isSuperAdmin($authStore.user)}
           <button class="send-btn-mobile" on:click|stopPropagation={openConfirmModal}>
             Отправить
           </button>
@@ -182,17 +245,27 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.5rem 0;
+    padding: 0.375rem 0;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .card-body .info-row:last-child {
+    border-bottom: none;
   }
 
   .card-body .label {
-    font-size: 0.875rem;
+    font-size: 0.8rem;
     color: #475569;
+    font-weight: 500;
   }
 
   .card-body .value {
-    font-weight: 500;
+    font-weight: 600;
     color: #1e293b;
+    font-size: 0.875rem;
+    text-align: right;
+    flex-shrink: 0;
+    max-width: 60%;
   }
 
   .deadline-value {
@@ -208,6 +281,28 @@
   .deadline-critical { color: #dc2626; font-weight: 600; }
   .deadline-overdue { color: #b91c1c; font-weight: 700; }
 
+  /* Стили для разности */
+  .difference-value.positive { 
+    color: #059669; 
+    font-weight: 600;
+  }
+  .difference-value.negative { 
+    color: #dc2626; 
+    font-weight: 600;
+  }
+  .difference-value.neutral { 
+    color: #6b7280; 
+    font-weight: 500;
+  }
+  .difference-value.critical {
+    color: #dc2626;
+    background-color: #fef2f2;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+
   .card-footer {
     display: flex;
     justify-content: space-between;
@@ -215,6 +310,18 @@
     padding-top: 0.75rem;
     margin-top: 0.75rem;
     border-top: 1px solid #f1f5f9;
+  }
+
+  .status-section {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .status-label {
+    font-size: 0.8rem;
+    color: #475569;
+    font-weight: 500;
   }
 
   .send-btn-mobile {

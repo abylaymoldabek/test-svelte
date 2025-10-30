@@ -55,8 +55,8 @@ export var russianTimeZones = [
       label: `Омск (${getUTCOffset("Asia/Omsk")})`,
     },
     {
-      value: "Asia/Krasnoyarsk",
-      label: `Красноярск (${getUTCOffset("Asia/Krasnoyarsk")})`,
+      value: "Asia/Novosibirsk",
+      label: `Новосибирск (${getUTCOffset("Asia/Novosibirsk")})`,
     },
     {
       value: "Asia/Irkutsk",

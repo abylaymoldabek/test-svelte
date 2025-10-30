@@ -32,8 +32,6 @@
 			
 			// Get redirect URL from query params, default to dashboard
 			const redirectTo = $page.url.searchParams.get('redirect') || '/dashboard';
-			console.log('Login successful, redirecting to:', redirectTo);
-			console.log('Current URL search params:', $page.url.searchParams.toString());
 			
 			await goto(redirectTo);
 		} catch (err) {

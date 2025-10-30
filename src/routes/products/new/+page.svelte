@@ -81,18 +81,15 @@
     const token = authService.getStoredToken();
     
     if (!token || authService.isTokenExpired()) {
-      console.log('No valid token found, redirecting to login');
       if (!token) {
         console.log('Token is missing');
       } else {
-        console.log('Token is expired');
         await authService.logout();
       }
       await goto('/login');
       return;
     }
 
-    console.log('Token is valid, initializing...');
     initializeTokenPayload();
   });
 
@@ -106,14 +103,12 @@
       // Получаем токен из localStorage для авторизации
       const token = authService.getStoredToken();
       if (!token) {
-        console.log('Token not found, redirecting to login');
         await goto('/login');
         return;
       }
 
       // Проверяем, не истек ли токен
       if (authService.isTokenExpired()) {
-        console.log('Token expired, redirecting to login');
         await authService.logout(); // Удаляем протухший токен
         await goto('/login');
         return;
@@ -135,7 +130,6 @@
       if (!response.ok) {
         // Если получили 401 Unauthorized, токен недействителен
         if (response.status === 401) {
-          console.log('Unauthorized response, redirecting to login');
           await authService.logout();
           await goto('/login');
           return;

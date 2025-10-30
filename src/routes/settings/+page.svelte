@@ -2,6 +2,8 @@
   import { onMount, onDestroy } from "svelte";
   import { tokenPayload } from "$lib/stores/token.js";
   import { useAuthGuard } from "$lib/utils/auth-guard.js";
+  import { authStore } from "$lib/stores/auth";
+  import { isAdmin } from "$lib/utils/role-guard";
 
   let authGuard: {
     isAuthorized: boolean;
@@ -87,7 +89,6 @@
       //   body: JSON.stringify({ vetisSettings })
       // });
       
-      console.log("Настройки сохранены:", vetisSettings);
       alert("Настройки успешно сохранены!");
     } catch (error) {
       console.error("Ошибка сохранения настроек:", error);
@@ -98,11 +99,11 @@
 
 {#if $tokenPayload}
   <div class="settings-page">
-    <div class="expiration-info">
+    <!-- <div class="expiration-info">
       <span class="expiration-label">Дата истечения плана</span>
       <span class="expiration-date">{expirationDate}</span>
       <button class="renew-button">Обновить</button>
-    </div>
+    </div> -->
 
     <div class="settings-grid">
       <!-- Основные настройки -->
@@ -268,6 +269,7 @@
               bind:value={criticalPercentage}
               min="0"
               max="100"
+              disabled={!isAdmin($authStore.user)}
             />
           </div>
 
@@ -278,6 +280,7 @@
               id="delayed-dry"
               bind:value={delayedDryDays}
               min="0"
+              disabled={!isAdmin($authStore.user)}
             />
           </div>
 
@@ -288,6 +291,7 @@
               id="delayed-wet"
               bind:value={delayedWetDays}
               min="0"
+              disabled={!isAdmin($authStore.user)}
             />
           </div>
 
@@ -300,6 +304,7 @@
               id="forced-dry"
               bind:value={forcedDryDays}
               min="0"
+              disabled={!isAdmin($authStore.user)}
             />
           </div>
 
@@ -312,6 +317,7 @@
               id="forced-wet"
               bind:value={forcedWetDays}
               min="0"
+              disabled={!isAdmin($authStore.user)}
             />
           </div>
         </div>
@@ -319,7 +325,13 @@
     </div>
 
     <div class="form-actions">
-      <button class="save-button" on:click={saveSettings}>Сохранить</button>
+      {#if isAdmin($authStore.user)}
+        <button class="save-button" on:click={saveSettings}>Сохранить</button>
+      {:else}
+        <div class="access-denied">
+          <p>Только администраторы могут сохранять настройки</p>
+        </div>
+      {/if}
     </div>
   </div>
 {:else}
@@ -489,6 +501,15 @@
     box-shadow: 0 0 0 4px rgba(75, 75, 199, 0.1);
   }
 
+  input[type="text"]:disabled,
+  input[type="number"]:disabled,
+  select:disabled {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+    border-color: #e2e8f0;
+  }
+
   .checkbox-label {
     display: flex;
     align-items: center;
@@ -626,6 +647,24 @@
     background: #16a34a;
     transform: translateY(-1px);
     box-shadow: 0 4px 6px rgba(34, 197, 94, 0.2);
+  }
+
+  .access-denied {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 2rem;
+    background: #fef2f2;
+    border: 2px solid #fecaca;
+    border-radius: 8px;
+    color: #dc2626;
+    font-weight: 500;
+    font-size: 0.875rem;
+    text-align: center;
+  }
+
+  .access-denied p {
+    margin: 0;
   }
 
   .reset-color {

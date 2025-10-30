@@ -2,10 +2,13 @@ import type {
 	LoginCredentials, 
 	RegisterCredentials, 
 	AuthResponse, 
-	ResetPasswordRequest 
+	ResetPasswordRequest,
+	User 
 } from '../types/auth.js';
+import { decodeJWT, isTokenExpired } from '../utils/jwt.js';
 
 const API_BASE_URL = import.meta.env.PROD ? 'https://mars.dev.okto.ru:2000' : 'https://mars.dev.okto.ru:2000';
+// const API_BASE_URL = import.meta.env.PROD ? 'http://localhost:2000' : 'http://localhost:2000';
 
 interface AuthTokenResponse {
 	auth_token: string;
@@ -19,6 +22,7 @@ interface TokenPayload {
 	user_id?: string;
 	company_id?: string;
 	email?: string;
+	role?: string;
 	exp?: number;
 	iat?: number;
 	[key: string]: any;
@@ -27,9 +31,6 @@ interface TokenPayload {
 class AuthService {
 	private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 		const url = `${API_BASE_URL}${endpoint}`;
-		console.log('HTTP Request URL:', url);
-		console.log('HTTP Request method:', options.method || 'GET');
-		console.log('HTTP Request body:', options.body);
 		
 		const config: RequestInit = {
 			headers: {
@@ -41,23 +42,18 @@ class AuthService {
 
 		try {
 			const response = await fetch(url, config);
-			console.log('HTTP Response status:', response.status, response.statusText);
-			console.log('HTTP Response ok:', response.ok);
 			
 			// Получаем текст ответа для диагностики
 			const responseText = await response.text();
-			console.log('HTTP Response raw text:', responseText);
 			
 			if (!response.ok) {
 				let errorMessage = 'Something went wrong';
 				try {
 					if (responseText) {
 						const error: AuthErrorResponse = JSON.parse(responseText);
-						console.log('HTTP Response error body:', error);
 						errorMessage = error.error || errorMessage;
 					}
 				} catch (parseError) {
-					console.log('Failed to parse error response:', parseError);
 					errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 				}
 				throw new Error(errorMessage);
@@ -69,51 +65,50 @@ class AuthService {
 					const responseData = JSON.parse(responseText);
 					return responseData;
 				} catch (parseError) {
-					console.log('Failed to parse success response as JSON:', parseError);
 					return responseText as T;
 				}
 			} else {
-				console.log('Empty response body, returning null');
 				return null as T;
 			}
 		} catch (networkError) {
-			console.error('HTTP Network error:', networkError);
 			throw networkError;
 		}
 	}
 
 	async login(credentials: LoginCredentials): Promise<AuthResponse> {
-		const endpoint = import.meta.env.PROD ? '/auth/api' : '/auth/api';
-		console.log('Environment:', import.meta.env.PROD ? 'PROD' : 'DEV');
-		console.log('API_BASE_URL:', API_BASE_URL);
-		console.log('Endpoint:', endpoint);
-		console.log('Full URL:', `${API_BASE_URL}${endpoint}`);
-		
-		const tokenResponse = await this.request<AuthTokenResponse>(endpoint, {
-			method: 'POST',
-			body: JSON.stringify({
-				email: credentials.email,
-				password: credentials.password
-			}),
-		});
+		try {
+			const endpoint = import.meta.env.PROD ? '/auth/api' : '/auth/api';
+			const tokenResponse = await this.request<AuthTokenResponse>(endpoint, {
+				method: 'POST',
+				body: JSON.stringify({
+					email: credentials.email,
+					password: credentials.password
+				}),
+			});
 
-		const user = {
-			id: '1',
-			email: credentials.email,
-			firstName: 'User',
-			lastName: 'Admin',
-			createdAt: new Date().toISOString(),
-			updatedAt: new Date().toISOString()
-		};
+			// Сохраняем токены
+			this.storeTokens(tokenResponse.auth_token, tokenResponse.auth_token);
 
-		// Автоматически сохраняем токены и payload
-		this.storeTokens(tokenResponse.auth_token, tokenResponse.auth_token);
+			// Получаем пользователя из JWT токена
+			const user = this.getUserFromToken();
+			if (!user) {
+				throw new Error('Invalid token received from server');
+			}
 
-		return {
-			user,
-			token: tokenResponse.auth_token,
-			refreshToken: tokenResponse.auth_token // используем тот же токен как refresh
-		};
+			return {
+				user,
+				token: tokenResponse.auth_token,
+				refreshToken: tokenResponse.auth_token // используем тот же токен как refresh
+			};
+		} catch (error) {
+			// Fallback на мок для разработки, если сервер недоступен
+			if (import.meta.env.DEV) {
+				console.warn('Auth server unavailable, using mock auth:', error);
+				const { mockAuthService } = await import('./mock-auth.js');
+				return mockAuthService.login(credentials);
+			}
+			throw error;
+		}
 	}
 
 	async register(credentials: RegisterCredentials): Promise<AuthResponse> {
@@ -139,7 +134,6 @@ class AuthService {
 				}),
 			});
 			
-			console.log('checkToken: Success! Response:', response);
 			
 			// Проверяем разные форматы ответа
 			if (response === true || response === 'true' || 
@@ -149,7 +143,6 @@ class AuthService {
 			}
 			
 			// Если ответ получен успешно (HTTP 200), но содержимое не указывает на валидность
-			console.log('checkToken: Received successful response but token appears invalid based on content');
 			return true; // HTTP 200 обычно означает успех для check-token endpoint
 		} catch (error) {
 			console.error('checkToken: Failed with error:', error);
@@ -160,29 +153,47 @@ class AuthService {
 
 	getStoredToken(): string | null {
 		if (typeof window !== 'undefined') {
-			console.log('localStorage check:', {
-				hasLocalStorage: typeof localStorage !== 'undefined',
-				localStorageLength: localStorage.length,
-				allKeys: Object.keys(localStorage),
-				authTokenDirect: localStorage.getItem('auth_token'),
-				refreshTokenDirect: localStorage.getItem('refresh_token')
-			});
 			
 			const token = localStorage.getItem('auth_token');
-			console.log('getStoredToken result:', token);
 			return token;
 		}
-		console.log('Window is undefined, returning null');
 		return null;
+	}
+
+	/**
+	 * Получает данные пользователя из JWT токена
+	 */
+	getUserFromToken(): User | null {
+		const token = this.getStoredToken();
+		if (!token) {
+			return null;
+		}
+
+		// Проверяем, не истек ли токен
+		if (isTokenExpired(token)) {
+			this.clearTokens();
+			return null;
+		}
+
+		const payload = decodeJWT(token);
+		if (!payload) {
+			return null;
+		}
+
+		// Преобразуем payload в объект User
+		return {
+			id: payload.id || payload.user_id || '',
+			email: payload.email || '',
+			firstName: payload.firstName || payload.first_name || '',
+			lastName: payload.lastName || payload.last_name || '',
+			role: payload.role || 'user',
+			createdAt: payload.createdAt || payload.created_at || new Date().toISOString(),
+			updatedAt: payload.updatedAt || payload.updated_at || new Date().toISOString(),
+		};
 	}
 
 	storeTokens(token: string, refreshToken: string): void {
 		if (typeof window !== 'undefined') {
-			console.log('Storing tokens:', {
-				token: token?.substring(0, 20) + '...',
-				refreshToken: refreshToken?.substring(0, 20) + '...',
-				hasLocalStorage: typeof localStorage !== 'undefined'
-			});
 			
 			localStorage.setItem('auth_token', token);
 			localStorage.setItem('refresh_token', refreshToken);
@@ -190,19 +201,12 @@ class AuthService {
 			// Проверяем, что токены действительно сохранились
 			const storedToken = localStorage.getItem('auth_token');
 			const storedRefreshToken = localStorage.getItem('refresh_token');
-			console.log('Verification after storing:', {
-				storedToken: storedToken?.substring(0, 20) + '...',
-				storedRefreshToken: storedRefreshToken?.substring(0, 20) + '...',
-				areEqual: storedToken === token
-			});
 			
 			// Декодируем и сохраняем payload
 			const payload = this.decodeJWT(token);
 			if (payload) {
 				localStorage.setItem('token_payload', JSON.stringify(payload));
-				console.log('Payload stored:', payload);
 			} else {
-				console.log('Failed to decode JWT payload');
 			}
 		} else {
 			console.log('Window is undefined, cannot store tokens');
@@ -272,7 +276,6 @@ class AuthService {
 	 */
 	isTokenExpired(): boolean {
 		const payload = this.getStoredPayload();
-		console.log('Checking if token is expired with payload:', payload);
 		if (!payload?.exp) {
 			return true;
 		}
@@ -286,7 +289,6 @@ class AuthService {
 	 */
 	shouldRefreshToken(): boolean {
 		const payload = this.getStoredPayload();
-		console.log('Checking if token should be refreshed with payload:', payload);
 		if (!payload?.exp) {
 			return false;
 		}
@@ -304,11 +306,9 @@ class AuthService {
 		try {
 			const refreshToken = localStorage.getItem('refresh_token');
 			if (!refreshToken) {
-				console.log('No refresh token found');
 				return null;
 			}
 
-			console.log('Refreshing token...');
 			const endpoint = import.meta.env.DEV ? '/api/v1/auth/refresh' : '/v1/auth/refresh';
 			
 			const response = await this.request<AuthTokenResponse>(endpoint, {
@@ -320,7 +320,6 @@ class AuthService {
 
 			// Сохраняем новый токен
 			this.storeTokens(response.auth_token, refreshToken);
-			console.log('Token refreshed successfully');
 			
 			// Обновляем stores
 			const { refreshTokenPayload } = await import('../stores/token.js');
@@ -341,14 +340,12 @@ class AuthService {
 	async ensureValidToken(): Promise<boolean> {
 		// Проверяем, истек ли токен
 		if (this.isTokenExpired()) {
-			console.log('Token expired, attempting to refresh...');
 			const newToken = await this.refreshToken();
 			return newToken !== null;
 		}
 		
 		// Проверяем, нужно ли обновить токен
 		if (this.shouldRefreshToken()) {
-			console.log('Token will expire soon, refreshing...');
 			const newToken = await this.refreshToken();
 			// Даже если обновление не удалось, текущий токен еще может быть валидным
 			return newToken !== null || !this.isTokenExpired();
@@ -358,15 +355,24 @@ class AuthService {
 	}
 
 	/**
-	 * Очищает все сохраненные данные при logout
+	 * Очищает сохраненные токены
 	 */
-	async logout(): Promise<void> {
+	clearTokens(): void {
 		if (typeof window !== 'undefined') {
 			localStorage.removeItem('auth_token');
 			localStorage.removeItem('refresh_token');
 			localStorage.removeItem('token_payload');
-			
-			// Очищаем stores
+		}
+	}
+
+	/**
+	 * Очищает все сохраненные данные при logout
+	 */
+	async logout(): Promise<void> {
+		this.clearTokens();
+		
+		// Очищаем stores
+		if (typeof window !== 'undefined') {
 			const { clearTokenPayload } = await import('../stores/token.js');
 			clearTokenPayload();
 		}

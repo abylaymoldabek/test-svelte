@@ -12,19 +12,16 @@ export async function checkAuthAndRedirect(redirectTo?: string): Promise<boolean
 	const isAuth = get(isAuthenticated);
 	const payload = get(tokenPayload);
 	
-	console.log('checkAuthAndRedirect called:', { isAuth, payload, redirectTo });
 	
 	// Пытаемся обновить токен если необходимо
 	const tokenValid = await authService.ensureValidToken();
 	
 	if (!tokenValid) {
-		console.log('Token invalid and cannot be refreshed, redirecting to login');
 		// Если токен нельзя обновить, очищаем localStorage и перенаправляем
 		authService.logout();
 		
 		// Формируем URL для редиректа
 		const loginUrl = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login';
-		console.log('Redirecting to:', loginUrl);
 		goto(loginUrl);
 		
 		return false;
@@ -40,18 +37,15 @@ export async function checkAuthAndRedirect(redirectTo?: string): Promise<boolean
 		const updatedPayload = get(tokenPayload);
 		
 		if (!updatedIsAuth || !updatedPayload) {
-			console.log('Stores not updated after token refresh, redirecting to login');
 			authService.logout();
 			
 			const loginUrl = redirectTo ? `/login?redirect=${encodeURIComponent(redirectTo)}` : '/login';
-			console.log('Redirecting to:', loginUrl);
 			goto(loginUrl);
 			
 			return false;
 		}
 	}
 	
-	console.log('User is authenticated, staying on page');
 	return true;
 }
 
@@ -62,7 +56,6 @@ export async function checkAuthAndRedirect(redirectTo?: string): Promise<boolean
  */
 export function isTokenExpired(payload: any): boolean {
 	if (!payload?.exp) {
-		console.log('Token has no expiration field');
 		return true;
 	}
 	
@@ -78,17 +71,14 @@ export function isTokenExpired(payload: any): boolean {
  */
 export function startTokenWatcher(currentPath: string) {
 	const interval = setInterval(async () => {
-		console.log('Token watcher: checking token validity...');
 		
 		// Пытаемся обновить токен если необходимо
 		const tokenValid = await authService.ensureValidToken();
 		
 		if (!tokenValid) {
-			console.log('Token watcher: token invalid, clearing interval and redirecting');
 			clearInterval(interval);
 			await checkAuthAndRedirect(currentPath);
 		} else {
-			console.log('Token watcher: token is valid');
 		}
 	}, 60 * 1000); // Проверяем каждую минуту
 	

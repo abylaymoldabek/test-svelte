@@ -8,6 +8,7 @@
   import BatchesTable from "./components/BatchesTable.svelte";
   import BatchesList from "./components/BatchesList.svelte";
   import SendConfirmModal from "./components/SendConfirmModal.svelte";
+  import AdaptiveDateRangePicker from "./components/AdaptiveDateRangePicker.svelte";
 
   const vetisStore = createVetisStore();
   const { batches, loading, error, deadlineTimezone, loadBatches, sendToVetis, cleanup } = vetisStore;
@@ -164,6 +165,17 @@
                   class="mobile-filter-input"
                 />
               </div>
+
+              <div class="mobile-filter-section">
+                <label class="mobile-filter-label">Дата производства</label>
+                <div class="mobile-date-picker">
+                  <AdaptiveDateRangePicker 
+                    bind:dateFrom={filters.dateFrom}
+                    bind:dateTo={filters.dateTo}
+                    placeholder="Выберите период производства"
+                  />
+                </div>
+              </div>
             </div>
           {/if}
         </div>
@@ -308,6 +320,18 @@
      padding: 0.5rem;
      border: 1px solid #d1d5db;
      border-radius: 6px;
+  }
+
+  .mobile-date-picker {
+    width: 100%;
+  }
+
+  .mobile-date-picker :global(.date-picker-input) {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 1rem;
   }
 
 </style>

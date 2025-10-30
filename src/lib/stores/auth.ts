@@ -47,41 +47,23 @@ function createAuthStore() {
 			
 			update(state => ({ ...state, isLoading: true }));
 			
-			const token = authService.getStoredToken();
-			const user = authService.getStoredPayload();
-			if (token && user) {
-				try {
-					const isValid = await authService.checkToken(token, user.company_id || '');
-					if (isValid) {
-						// Токен действителен, получаем данные пользователя
-						update(state => ({
-							...state,
-							company_id: user?.company_id || null,
-							email: user?.email || null,
-							isAuthenticated: true,
-							isLoading: false,
-							isInitialized: true
-						}));
-					} else {
-						await authService.logout();
-						update(state => ({
-							...state,
-							isLoading: false,
-							isInitialized: true
-						}));
-					}
-				} catch (error) {
-					// Ошибка при проверке токена
-					await authService.logout();
-					update(state => ({
-						...state,
-						isLoading: false,
-						isInitialized: true
-					}));
-				}
-			} else {
+			// Получаем пользователя из JWT токена
+			const user = authService.getUserFromToken();
+			if (user) {
+				// Токен валиден и пользователь получен
 				update(state => ({
 					...state,
+					user,
+					isAuthenticated: true,
+					isLoading: false,
+					isInitialized: true
+				}));
+			} else {
+				// Токен отсутствует, истек или невалиден
+				update(state => ({
+					...state,
+					user: null,
+					isAuthenticated: false,
 					isLoading: false,
 					isInitialized: true
 				}));

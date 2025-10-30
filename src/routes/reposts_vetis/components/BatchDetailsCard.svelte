@@ -7,13 +7,15 @@
   function getBatchStatus(batch: Batch) {
     if (!batch) return "Произведено";
 
-    // Статусы в порядке их выполнения
+    // Статусы в порядке их выполнения (синхронизировано с VetisStatusBadge)
     const statusMapping: Record<string, string> = {
-      'in_progress': 'Производится',
+      'new': 'Новая',
+      'producing': 'Производится',
       'produced': 'Произведено', 
-      'on_hold': 'На холде',
-      'submitting': 'Отправляется',
-      'submitted': 'Отправлена'
+      'hold': 'На холде',
+      'resumed': 'Возобновлено',
+      'sending': 'Отправляется',
+      'done': 'Отправлена'
     };
 
     return statusMapping[batch.status] || 'Произведено';
@@ -22,9 +24,11 @@
   function isStepCompleted(batch: Batch, step: string) {
     const currentStatus = getBatchStatus(batch);
     const statusOrder = [
-      "Производится",
+      "Новая",
+      "Производится", 
       "Произведено",
       "На холде",
+      "Возобновлено",
       "Отправляется",
       "Отправлена",
     ];
@@ -108,6 +112,10 @@
     border-radius: 8px;
     border-left: 3px solid #3b82f6;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    max-height: 400px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .batch-info-header {
@@ -182,5 +190,73 @@
   .flow-arrow-mini {
     color: #d1d5db;
     font-size: 0.875rem;
+  }
+
+  /* Адаптивные стили для мобильных устройств */
+  @media (max-width: 767px) {
+    .batch-info-card {
+      margin: 0.25rem;
+      padding: 0.75rem;
+      max-height: 350px;
+    }
+
+    .batch-info-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .batch-info-meta {
+      font-size: 0.75rem;
+    }
+
+    .process-flow-mini {
+      gap: 0.25rem;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding: 0.5rem 0;
+    }
+
+    .flow-item-mini {
+      gap: 0.125rem;
+      font-size: 0.55rem;
+      min-width: fit-content;
+      flex-shrink: 0;
+    }
+
+    .flow-circle-mini {
+      width: 18px;
+      height: 18px;
+      font-size: 0.55rem;
+    }
+
+    .flow-arrow-mini {
+      font-size: 0.75rem;
+      flex-shrink: 0;
+    }
+  }
+
+  /* Стили для планшетов */
+  @media (min-width: 768px) and (max-width: 1023px) {
+    .batch-info-card {
+      margin: 0.375rem;
+      padding: 0.875rem;
+      max-height: 375px;
+    }
+
+    .batch-info-header {
+      font-size: 0.825rem;
+    }
+
+    .flow-item-mini {
+      font-size: 0.6rem;
+    }
+
+    .flow-circle-mini {
+      width: 19px;
+      height: 19px;
+      font-size: 0.6rem;
+    }
   }
 </style>
