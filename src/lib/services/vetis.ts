@@ -1,7 +1,7 @@
 import { writable, derived } from "svelte/store";
 import type { Batch } from "$lib/types/batch";
 
-const VETIS_API_URL = "/api/v1/batches"; // Using local proxy
+const VETIS_API_URL = "http://158.160.90.93:8082/api/v1/batches"; // Direct API endpoint
 
 export function createVetisStore() {
   const batches = writable<Batch[]>([]);
