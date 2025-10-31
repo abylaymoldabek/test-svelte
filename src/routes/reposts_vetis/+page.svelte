@@ -255,8 +255,20 @@
       </div>
     {:else if $error}
         <div class="error-container">
-            <p>Ошибка загрузки данных: {$error}</p>
-            <button on:click={() => loadBatches(filters)}>Попробовать снова</button>
+            <div class="error-card">
+                <div class="error-icon">⚠️</div>
+                <h3>Не удалось загрузить данные</h3>
+                <p>Возникла проблема при подключении к серверу. Проверьте интернет-соединение и попробуйте еще раз.</p>
+                <div class="error-actions">
+                    <button class="retry-button" on:click={() => loadBatches(filters)}>
+                        🔄 Попробовать снова
+                    </button>
+                </div>
+                <details class="error-details">
+                    <summary>Техническая информация</summary>
+                    <code>{$error}</code>
+                </details>
+            </div>
         </div>
     {/if}
 
@@ -522,6 +534,90 @@
 
   .clear-filters-btn:hover {
     background: #dc2626;
+  }
+
+  /* Красивые стили для ошибки */
+  .error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 400px;
+    padding: 2rem;
+  }
+
+  .error-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    border-left: 4px solid #f59e0b;
+  }
+
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .error-card h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+
+  .error-card p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .error-actions {
+    margin-bottom: 1.5rem;
+  }
+
+  .retry-button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .retry-button:hover {
+    background: #2563eb;
+  }
+
+  .error-details {
+    text-align: left;
+    margin-top: 1rem;
+  }
+
+  .error-details summary {
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+  }
+
+  .error-details code {
+    background: #f3f4f6;
+    padding: 0.75rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #374151;
+    display: block;
+    word-break: break-all;
+    border: 1px solid #e5e7eb;
   }
 
 </style>
