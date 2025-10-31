@@ -52,7 +52,7 @@
       if (!token?.company_id) return;
 
       const accessToken = token.token;
-      const response = await fetch(`/api/vetis/companies/${token.company_id}`, {
+      const response = await fetch(`/api/v1/companies/${token.company_id}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
