@@ -88,7 +88,7 @@
     loading = true;
     try {
       // Use relative /api path so dev proxy (vite) or SvelteKit proxy can handle it
-      const url = `/api/vetis/companies/${companyId}`;
+      const url = `/api/v1/companies/${companyId}`;
       const token = authService.getStoredToken();
 
       const res = await fetch(url, {
@@ -133,7 +133,7 @@
         return;
       }
 
-      const url = `/api/vetis/companies/${companyId}`;
+      const url = `/api/v1/companies/${companyId}`;
       const token = authService.getStoredToken();
 
       const payload = {
